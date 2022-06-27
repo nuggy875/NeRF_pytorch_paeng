@@ -1,0 +1,12 @@
+visdom: False # Use Visdom or Not
+visdom_port: '8900'
+visdom_step: 100
+
+training:
+  batch_size: 2
+  epoch: 300
+  lr: 1e-4
+
+data:
+  root: '/home/brozserver2/brozdisk/data/nerf'
+  type: 'blender'

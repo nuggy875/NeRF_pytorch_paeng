@@ -1,0 +1,10 @@
+visdom: false
+visdom_port: '8900'
+visdom_step: 100
+training:
+  batch_size: 2
+  epoch: 300
+  lr: 0.0001
+data:
+  root: /home/brozserver2/brozdisk/data/nerf
+  type: blender
