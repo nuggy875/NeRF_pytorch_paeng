@@ -1,5 +1,5 @@
 visdom: False # Use Visdom or Not
-visdom_port: '8900'
+visdom_port: "8900"
 visdom_step: 100
 
 training:
@@ -8,5 +8,8 @@ training:
   lr: 1e-4
 
 data:
-  root: '/home/brozserver2/brozdisk/data/nerf'
-  type: 'blender'
+  name: "lego"
+  root: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
+  type: "blender"
+  half_res: False
+  white_bkgd: True

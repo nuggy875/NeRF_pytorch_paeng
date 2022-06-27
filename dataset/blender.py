@@ -7,7 +7,6 @@ import imageio
 import json
 import torch.nn.functional as F
 import cv2
-from configs.config import parse
 
 
 def trans_t(t): return torch.Tensor([
@@ -32,6 +31,7 @@ def rot_theta(th): return torch.Tensor([
 
 
 # theta, -30, 4 : shperical to cartesian
+# theta : [-180, -171, -162 ..., 171] (40)
 def pose_spherical(theta, phi, radius):
     c2w = trans_t(radius)
     c2w = rot_phi(phi/180.*np.pi) @ c2w
@@ -41,18 +41,19 @@ def pose_spherical(theta, phi, radius):
     return c2w
 
 
-def load_blender(data_root: str, data_name: str, autodownload: bool = True, testskip: int = 8):
-    print(f"Loading Dataset {data_name}, from {data_root}")
+def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: bool = True, testskip: int = 8):
+    print(f"\n\nLoading Dataset {data_name}, from {data_root}")
     splits = ['train', 'val', 'test']
     metas = {}
+    # Load Annotation (JSON)
     for s in splits:
-        # base_dir : data_dir (NeRF Data)
         with open(os.path.join(data_root, 'transforms_{}.json'.format(s)), 'r') as fp:
             metas[s] = json.load(fp)
 
     all_imgs = []
     all_poses = []
     counts = [0]
+    # Load Images
     for s in splits:
         meta = metas[s]
         imgs = []
@@ -80,13 +81,13 @@ def load_blender(data_root: str, data_name: str, autodownload: bool = True, test
     poses = np.concatenate(all_poses, 0)
 
     H, W = imgs[0].shape[:2]
-    camera_angle_x = float(meta['camera_angle_x'])
+    camera_angle_x = float(metas['train']['camera_angle_x'])
     focal = .5 * W / np.tan(.5 * camera_angle_x)
 
     render_poses = torch.stack([pose_spherical(angle, -30.0, 4.0)
                                for angle in np.linspace(-180, 180, 40+1)[:-1]], 0)
 
-    half_res = True         # FIXME
+    half_res = False         # FIXME
     if half_res:
         H = H//2
         W = W//2
@@ -97,11 +98,9 @@ def load_blender(data_root: str, data_name: str, autodownload: bool = True, test
             imgs_half_res[i] = cv2.resize(
                 img, (W, H), interpolation=cv2.INTER_AREA)
         imgs = imgs_half_res
-        # imgs = tf.image.resize_area(imgs, [400, 400]).numpy()
-
     return imgs, poses, render_poses, [H, W, focal], i_split
 
 
 if __name__ == "__main__":
-    opts = parse(sys.argv[1:])
-    load_blender(opts.data_root, opts.data_root)
+    load_blender(
+        "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender", False)
