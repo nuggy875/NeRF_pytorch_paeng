@@ -46,7 +46,7 @@ def main(cfg: DictConfig):
 
         H, W, focal = hwf
         H, W = int(H), int(W)
-
+        # FIXME) K의 용도 확인할 것
         K = np.array([
             [focal, 0, 0.5*W],
             [0, focal, 0.5*H],
