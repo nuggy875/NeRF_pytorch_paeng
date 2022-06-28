@@ -1,11 +1,7 @@
-visdom: False # Use Visdom or Not
-visdom_port: "8900"
-visdom_step: 100
-
-training:
-  batch_size: 2
-  epoch: 300
-  lr: 1e-4
+visdom:
+  use: False
+  port: "8900"
+  step: 100
 
 data:
   name: "lego"
@@ -13,3 +9,12 @@ data:
   type: "blender"
   half_res: False
   white_bkgd: True
+
+training:
+  batch_size: 2
+  epoch: 300
+  lr: 1e-4
+
+model:
+  netDepth: 8
+  netWidth: 256
