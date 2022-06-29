@@ -1,7 +1,7 @@
-visdom:
-  use: False
-  port: "8900"
-  step: 100
+visualization:
+  visdom: False
+  visdom_port: "8900"
+  visdom_step: 100
 
 data:
   name: "lego"
@@ -18,3 +18,10 @@ training:
 model:
   netDepth: 8
   netWidth: 256
+
+  depth_near: 2.
+  depth_far: 6.
+
+  n_pts_per_ray: 64
+  n_importance: 128
+  n_rays_per_image: 1024

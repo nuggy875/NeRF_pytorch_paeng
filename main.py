@@ -8,7 +8,7 @@ from PIL import Image
 from omegaconf import DictConfig
 
 from dataset import load_blender
-from model import NeRF
+from model import NeRF, get_positional_encoder
 
 CONFIG_DIR = os.path.join(os.path.dirname(
     os.path.realpath(__file__)), "configs")
@@ -26,12 +26,12 @@ def main(cfg: DictConfig):
     # opts = parse(sys.argv[1:])
 
     # == visdom ==
-    if cfg.visdom.use:
-        vis = visdom.Visom(port=cfg.visdom.port)
+    if cfg.visualization.visdom:
+        vis = visdom.Visom(port=cfg.visualization.visdom_port)
     else:
         vis = None
 
-    # == 1. dataset (blender) ==
+    # == 1. LOAD DATASET (blender) ==
     if cfg.data.type == 'blender':
         images, poses, render_poses, hwf, i_split = load_blender(
             cfg.data.root, cfg.data.name, cfg.data.half_res)
@@ -55,12 +55,19 @@ def main(cfg: DictConfig):
             [0, focal, 0.5*H],
             [0, 0, 1]
         ])
-        # saveNumpyImage(images[0])
 
-    # == 2. POSITIONAL ENCODING ==
+    # saveNumpyImage(images[0])         # for testing
+
+    # == 2. POSITIONAL ENCODING - Define Function ==
+    fn_posenc, input_ch = get_positional_encoder(L=10)
+    fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
+
+    output_ch = 5 if cfg.model.n_importance > 0 else 4
+    skips = [4]     # FIXME what is this for?
 
     # == 3. DEFINE MODEL (NeRF) ==
-    model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth)
+    model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
+                 input_ch=input_ch, input_ch_d=input_ch_d, output_ch=output_ch, skips=skips).to(device)
 
 
 if __name__ == "__main__":
