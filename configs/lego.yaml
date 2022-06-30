@@ -1,19 +1,19 @@
 visualization:
   visdom: False
-  visdom_port: "8900"
+  visdom_port: '8900'
   visdom_step: 100
 
 data:
-  name: "lego"
-  root: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
-  type: "blender"
+  name: 'lego'
+  root: '/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego'
+  type: 'blender'
   half_res: False
   white_bkgd: True
 
 training:
   batch_size: 2
   epoch: 300
-  lr: 1e-4
+  lr: 5e-4
 
 model:
   netDepth: 8
