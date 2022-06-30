@@ -56,18 +56,18 @@ def main(cfg: DictConfig):
             [0, 0, 1]
         ])
 
-    # saveNumpyImage(images[0])         # for testing
+    # saveNumpyImage(images[0])         # Save Image for testing
 
     # == 2. POSITIONAL ENCODING - Define Function ==
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
 
-    output_ch = 5 if cfg.model.n_importance > 0 else 4
+    # output_ch = 5 if cfg.model.n_importance > 0 else 4
     skips = [4]     # FIXME what is this for?
 
     # == 3. DEFINE MODEL (NeRF) ==
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
-                 input_ch=input_ch, input_ch_d=input_ch_d, output_ch=output_ch, skips=skips).to(device)
+                 input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
 
 
 if __name__ == "__main__":
