@@ -27,6 +27,9 @@ def saveNumpyImage(img):
     im.save(LOG_DIR+'/white_bkgd_false.jpg')
 
 
+# def render_rays
+
+
 def get_rays(W, H, K, c2w):
     '''
     img_k = [3,3] pose = [3,4]
