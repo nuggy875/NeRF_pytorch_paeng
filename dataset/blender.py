@@ -8,6 +8,21 @@ import json
 import torch.nn.functional as F
 import cv2
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
+
+
+def show_3d():
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.view_init(30, 60)
+    ax.set_xlabel('x axis')
+    ax.set_ylabel('y axis')
+    ax.set_zlabel('z axis')
+    plt.title('3D')
+
+    return 0
+
 
 def trans_t(t): return torch.Tensor([
     [1, 0, 0, 0],
@@ -102,5 +117,5 @@ def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: b
 
 
 if __name__ == "__main__":
-    load_blender(
-        "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender", False)
+    # i, p, r_p, hwf, i = load_blender("/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender", False)
+    show_3d

@@ -1,12 +1,12 @@
 visualization:
   visdom: False
-  visdom_port: '8900'
+  visdom_port: "8900"
   visdom_step: 100
 
 data:
-  name: 'lego'
-  root: '/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego'
-  type: 'blender'
+  name: "lego"
+  root: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
+  type: "blender"
   half_res: False
   white_bkgd: True
 
@@ -22,6 +22,9 @@ model:
   depth_near: 2.
   depth_far: 6.
 
-  n_pts_per_ray: 64
   n_importance: 128
+  n_pts_per_ray: 64
   n_rays_per_image: 1024
+
+  n_rays_net: 32768
+  n_pts_net: 65536

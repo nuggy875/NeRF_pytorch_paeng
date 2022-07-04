@@ -13,7 +13,8 @@ from dataset import load_blender
 from model import NeRF, get_positional_encoder
 
 device_ids = [0]
-device = torch.device('cuda:{}'.format(min(device_ids)) if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:{}'.format(min(device_ids))
+                      if torch.cuda.is_available() else 'cpu')
 np.random.seed(0)
 
 CONFIG_DIR = os.path.join(os.path.dirname(
@@ -30,6 +31,10 @@ def saveNumpyImage(img):
 # def render_rays
 
 
+def render(H, W, K, chunk, rays, near, far):
+    rays_o, rays_d = rays
+
+
 def get_rays(W, H, K, c2w):
     '''
     img_k = [3,3] pose = [3,4]
@@ -37,11 +42,15 @@ def get_rays(W, H, K, c2w):
     i, j = torch.meshgrid(torch.linspace(0, W-1, W), torch.linspace(0, H-1, H))
     i = i.t()
     j = j.t()
-    dirs = torch.stack([(i-K[0][2])/K[0][0], -(j-K[1][2])/K[1][1], -torch.ones_like(i)], -1)        # dirs [W, H, 3]
+    # [x',y',1] -> [u,v,1]
+    dirs = torch.stack([(i-K[0][2])/K[0][0],
+                        -(j-K[1][2])/K[1][1],
+                        -torch.ones_like(i)], -1)  # FIXME why '-'?
     # Rotate ray directions from camera frame to the world frame
-    rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3,:3], -1)  # dot product, equals to: [c2w.dot(dir) for dir in dirs]
+    # dot product, equals to: [c2w.dot(dir) for dir in dirs]
+    rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
     # Translate camera frame's origin to the world frame. It is the origin of all rays.
-    rays_o = c2w[:3,-1].expand(rays_d.shape)
+    rays_o = c2w[:3, -1].expand(rays_d.shape)
     return rays_o, rays_d
 
 
@@ -94,10 +103,9 @@ def main(cfg: DictConfig):
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
     grad_vars = list(model.parameters())
 
-
     # == 4. OPTIMIZER ==
-    print(cfg.training.lr)
-    optimizer = torch.optim.Adam(params=grad_vars, lr=cfg.training.lr, betas=(0.9, 0.999))
+    optimizer = torch.optim.Adam(
+        params=grad_vars, lr=cfg.training.lr, betas=(0.9, 0.999))
 
     # == T R A I N I N G ==
     print('TRAIN views are', i_train)
@@ -109,17 +117,33 @@ def main(cfg: DictConfig):
     for i in trange(start, N_iters):
         time_start = time.time()
         # i_img = np.random.choice(i_train)
-        i_img = 0                                                   # FIXME for testing
+        i_img = 0   # FIXME for testing -> 추후 랜덤 샘플링으로 교체
         target_img = images[i_img]
         target_img = torch.Tensor(target_img).to(device)
-        target_pose_test = poses[i_img]
         target_pose = poses[i_img, :3, :4]
-        rays_o, rays_d = get_rays(img_w, img_h, img_k, torch.Tensor(target_pose))
+        rays_o, rays_d = get_rays(
+            img_w, img_h, img_k, torch.Tensor(target_pose))
 
         # FIXME precrops SKIP
+        # == Random Sampling (number of rays per image) (default : 1024) ==
+        coords = torch.stack(torch.meshgrid(torch.linspace(
+            0, img_h-1, img_h), torch.linspace(0, img_w-1, img_w)), -1)  # (H, W, 2)
+        coords = torch.reshape(coords, [-1, 2])  # [ HxW , 2 ]
+        selected_idx = np.random.choice(
+            coords.shape[0], size=[cfg.model.n_rays_per_image], replace=False)
+        selected_coords = coords[selected_idx].long()  # (N_rand, 2)
 
+        # == Sample Rays ==
+        rays_o = rays_o[selected_coords[:, 0], [selected_coords[:, 1]]]
+        rays_d = rays_d[selected_coords[:, 0], [selected_coords[:, 1]]]
+        batch_rays = torch.stack([rays_o, rays_d], 0)
+        # == Sample Pixel ==
+        target_img_s = target_img[selected_coords[:, 0], [
+            selected_coords[:, 1]]]
 
-        # Render ( get GT )
+        # == Render (get Pred) ==
+        render(img_h, img_w, img_k, chunk=cfg.model.n_rays_net,
+               rays=batch_rays, near=cfg.model.depth_near, far=cfg.model.depth_far)
 
         optimizer.zero_grad()
         # TODO >> LOSS
@@ -130,21 +154,28 @@ def main(cfg: DictConfig):
 
 
 if __name__ == "__main__":
-    # main()
-    
+    main()
 
     # for testing RAYS
-    W = 400
-    H = 500
-    F = 555.55
+    # W = 400
+    # H = 500
+    # F = 555.55
 
-    
-    K = np.array([
-            [F, 0, 0.5*W],
-            [0, F, 0.5*H],
-            [0, 0, 1]
-        ])
-    # [3, 4] 상태의 train_1 pose (0,0,0,1) 지움
-    pose = np.array([[-0.9999021887779236,0.004192245192825794,-0.013345719315111637,-0.05379832163453102],[-0.013988681137561798,-0.2996590733528137,0.95394366979599,3.845470428466797],[-4.656612873077393e-10,0.9540371894836426,0.29968830943107605,1.2080823183059692]])
-    pose = torch.Tensor(pose)
-    get_rays(W, H, K, pose)
+    # K = np.array([
+    #     [F, 0, 0.5*W],
+    #     [0, F, 0.5*H],
+    #     [0, 0, 1]
+    # ])
+    # # [3, 4] 상태의 train_1 pose (0,0,0,1) 지움
+    # pose = np.array([[-0.9999021887779236, 0.004192245192825794, -0.013345719315111637, -0.05379832163453102], [-0.013988681137561798, -
+    #                 0.2996590733528137, 0.95394366979599, 3.845470428466797], [-4.656612873077393e-10, 0.9540371894836426, 0.29968830943107605, 1.2080823183059692]])
+    # pose = torch.Tensor(pose)
+    # get_rays(W, H, K, pose)
+
+    # ==========================================
+    # ray = torch.rand(400, 400, 3)
+    # c_ = torch.rand(1024, 2)*100
+    # c = c_.long()
+    # c1 = c[:, 0]
+    # c2 = c[:, 1]
+    # rays = ray[c1, c2]
