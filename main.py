@@ -33,6 +33,18 @@ def saveNumpyImage(img):
 
 def render(H, W, K, chunk, rays, near, far):
     rays_o, rays_d = rays
+    viewdirs = rays_d
+    viewdirs = viewdirs / torch.norm(viewdirs, dim=-1, keepdim=True)      # ?
+    viewdirs = torch.reshape(viewdirs, [-1, 3]).float()                 # ???
+    sh = rays_d.shape
+    # create ray batch
+    rays_o = torch.reshape(rays_o, [-1, 3]).float()
+    rays_d = torch.reshape(rays_d, [-1, 3]).float()
+    near = near * torch.ones_like(rays_d[..., :1])
+    far = far * torch.ones_like(rays_d[..., :1])
+    # [1024, 11]  (3, 3, 1, 1, 3)
+    rays = torch.cat([rays_o, rays_d, near, far, viewdirs], -1)
+    batchify_rays(rays, chunk)
 
 
 def get_rays(W, H, K, c2w):
@@ -107,7 +119,7 @@ def main(cfg: DictConfig):
     optimizer = torch.optim.Adam(
         params=grad_vars, lr=cfg.training.lr, betas=(0.9, 0.999))
 
-    # == T R A I N I N G ==
+    # ====  T R A I N I N G  ====
     print('TRAIN views are', i_train)
     print('TEST views are', i_test)
     print('VAL views are', i_val)
@@ -126,6 +138,7 @@ def main(cfg: DictConfig):
 
         # FIXME precrops SKIP
         # == Random Sampling (number of rays per image) (default : 1024) ==
+        # HxW 의 Pixel 중에서 1024개의 랜덤 샘플링
         coords = torch.stack(torch.meshgrid(torch.linspace(
             0, img_h-1, img_h), torch.linspace(0, img_w-1, img_w)), -1)  # (H, W, 2)
         coords = torch.reshape(coords, [-1, 2])  # [ HxW , 2 ]
@@ -147,7 +160,7 @@ def main(cfg: DictConfig):
 
         optimizer.zero_grad()
         # TODO >> LOSS
-        # MSE (target, gt)
+        # MSE (target_img_s, pred_rgb)
         # MSE -> PSNR
         # loss.backward
         optimizer.step()
