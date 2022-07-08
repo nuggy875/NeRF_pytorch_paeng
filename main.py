@@ -11,6 +11,7 @@ from tqdm import tqdm, trange
 
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
+from render import render
 
 device_ids = [0]
 device = torch.device('cuda:{}'.format(min(device_ids))
@@ -28,40 +29,21 @@ def saveNumpyImage(img):
     im.save(LOG_DIR+'/white_bkgd_false.jpg')
 
 
-# def render_rays
-
-
-def render(H, W, K, chunk, rays, near, far):
-    rays_o, rays_d = rays
-    viewdirs = rays_d
-    viewdirs = viewdirs / torch.norm(viewdirs, dim=-1, keepdim=True)      # ?
-    viewdirs = torch.reshape(viewdirs, [-1, 3]).float()                 # ???
-    sh = rays_d.shape
-    # create ray batch
-    rays_o = torch.reshape(rays_o, [-1, 3]).float()
-    rays_d = torch.reshape(rays_d, [-1, 3]).float()
-    near = near * torch.ones_like(rays_d[..., :1])
-    far = far * torch.ones_like(rays_d[..., :1])
-    # [1024, 11]  (3, 3, 1, 1, 3)
-    rays = torch.cat([rays_o, rays_d, near, far, viewdirs], -1)
-    batchify_rays(rays, chunk)
-
-
 def get_rays(W, H, K, c2w):
     '''
     img_k = [3,3] pose = [3,4]
+    Transpose Image Plane Coordinate to Normalized Plane ([x',y',1] -> [u,v,1])
+    # Rotate ray directions from camera frame to the world frame
+    # dot product, equals to: [c2w.dot(dir) for dir in dirs]
+    # Translate camera frame's origin to the world frame. It is the origin of all rays.
     '''
     i, j = torch.meshgrid(torch.linspace(0, W-1, W), torch.linspace(0, H-1, H))
     i = i.t()
     j = j.t()
-    # [x',y',1] -> [u,v,1]
     dirs = torch.stack([(i-K[0][2])/K[0][0],
                         -(j-K[1][2])/K[1][1],
                         -torch.ones_like(i)], -1)  # FIXME why '-'?
-    # Rotate ray directions from camera frame to the world frame
-    # dot product, equals to: [c2w.dot(dir) for dir in dirs]
     rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
-    # Translate camera frame's origin to the world frame. It is the origin of all rays.
     rays_o = c2w[:3, -1].expand(rays_d.shape)
     return rays_o, rays_d
 
@@ -147,12 +129,12 @@ def main(cfg: DictConfig):
         selected_coords = coords[selected_idx].long()  # (N_rand, 2)
 
         # == Sample Rays ==
-        rays_o = rays_o[selected_coords[:, 0], [selected_coords[:, 1]]]
-        rays_d = rays_d[selected_coords[:, 0], [selected_coords[:, 1]]]
+        rays_o = rays_o[selected_coords[:, 0], selected_coords[:, 1]]
+        rays_d = rays_d[selected_coords[:, 0], selected_coords[:, 1]]
         batch_rays = torch.stack([rays_o, rays_d], 0)
         # == Sample Pixel ==
-        target_img_s = target_img[selected_coords[:, 0], [
-            selected_coords[:, 1]]]
+        target_img_s = target_img[selected_coords[:, 0],
+                                  selected_coords[:, 1]]
 
         # == Render (get Pred) ==
         render(img_h, img_w, img_k, chunk=cfg.model.n_rays_net,
