@@ -11,7 +11,7 @@ from tqdm import tqdm, trange
 
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
-from render import render
+from render import rendering
 
 device_ids = [0]
 device = torch.device('cuda:{}'.format(min(device_ids))
@@ -118,14 +118,13 @@ def main(cfg: DictConfig):
         rays_o, rays_d = get_rays(
             img_w, img_h, img_k, torch.Tensor(target_pose))
 
-        # FIXME precrops SKIP
-        # == Random Sampling (number of rays per image) (default : 1024) ==
+        # == Sampling Target (number of rays per image) (default : 1024) ==
         # HxW 의 Pixel 중에서 1024개의 랜덤 샘플링
         coords = torch.stack(torch.meshgrid(torch.linspace(
             0, img_h-1, img_h), torch.linspace(0, img_w-1, img_w)), -1)  # (H, W, 2)
         coords = torch.reshape(coords, [-1, 2])  # [ HxW , 2 ]
         selected_idx = np.random.choice(
-            coords.shape[0], size=[cfg.model.n_rays_per_image], replace=False)
+            coords.shape[0], size=[cfg.render.n_rays_per_image], replace=False)  # default 1024
         selected_coords = coords[selected_idx].long()  # (N_rand, 2)
 
         # == Sample Rays ==
@@ -137,8 +136,7 @@ def main(cfg: DictConfig):
                                   selected_coords[:, 1]]
 
         # == Render (get Pred) ==
-        render(img_h, img_w, img_k, chunk=cfg.model.n_rays_net,
-               rays=batch_rays, near=cfg.model.depth_near, far=cfg.model.depth_far)
+        rendering(img_h, img_w, img_k, rays=batch_rays, cfg=cfg)
 
         optimizer.zero_grad()
         # TODO >> LOSS
