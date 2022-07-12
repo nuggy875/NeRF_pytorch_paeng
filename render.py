@@ -2,7 +2,10 @@ import torch
 import matplotlib.pyplot as plt
 
 
-def rendering(H, W, K, rays, cfg):
+def rendering(rays, fn_posenc, fn_posenc_d, model, cfg):
+    '''
+    rays : rays_o [1024, 3] , rays_d [1024, 3]
+    '''
     rays_o, rays_d = rays
     viewdirs = rays_d
     viewdirs = viewdirs / torch.norm(viewdirs, dim=-1, keepdim=True)  # 단위벡터화
@@ -14,12 +17,12 @@ def rendering(H, W, K, rays, cfg):
     near = cfg.render.depth_near * torch.ones_like(rays_d[..., :1])
     far = cfg.render.depth_far * torch.ones_like(rays_d[..., :1])
     rays = torch.cat([rays_o, rays_d, near, far, viewdirs], -1)  # [1024, 11]
-    chunk = cfg.render.n_rays_net
+    chunk = cfg.render.n_rays_per_image * cfg.render.chunk
 
-    # batchify rays -> chunk(1024x32) 로 나누기
+    # batchify rays -> n_rays_per_image(1024)를 chunk(1024x32) 로 batch 나누기
     all_ret = {}
     for i in range(0, rays.shape[0], chunk):
-        ret = render_rays(rays[i:i+chunk], cfg)
+        ret = run_model(rays[i:i+chunk], fn_posenc, fn_posenc_d, model, cfg)
         for k in ret:
             if k not in all_ret:
                 all_ret[k] = []
@@ -27,17 +30,38 @@ def rendering(H, W, K, rays, cfg):
     all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}
 
 
-def render_rays(ray_batch, cfg):
+def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     N_rays = ray_batch.shape[0]
     rays_o, rays_d = ray_batch[:, 0:3], ray_batch[:, 3:6]
     near = ray_batch[..., 6].unsqueeze(-1)
     far = ray_batch[..., 7].unsqueeze(-1)
     viewdirs = ray_batch[:, -3:]
 
+    # make points (input)
     t_vals = torch.linspace(0., 1., steps=cfg.render.n_coarse_pts_per_ray)
     z_vals = near * (1.-t_vals) + far * (t_vals)
     z_vals = z_vals.expand([N_rays, cfg.render.n_coarse_pts_per_ray])
-
+    mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])  # 이게 대체 뭐하는짓...?
+    upper = torch.cat([mids, z_vals[..., -1:]], -1)
+    lower = torch.cat([z_vals[..., :1], mids], -1)
+    t_rand = torch.rand(z_vals.shape)
+    z_vals = lower+(upper-lower)*t_rand
+    # ===== RUN NETWORK =====
+    input_pts = rays_o.unsqueeze(
+        1) + rays_d.unsqueeze(1) * z_vals.unsqueeze(-1)
+    input_pts_flat = torch.reshape(input_pts, [-1, 3])  # [1024,64,3]>[65536,3]
+    # POSITIONAL ENCODING
+    input_pts_embedded = fn_posenc(input_pts_flat)  # [65536,63]
+    # Direction
+    input_dirs = viewdirs.unsqueeze(1).expand(input_pts.shape)
+    input_dirs_flat = torch.reshape(input_dirs, [-1, 3])  # [65536,3]
+    input_dirs_embedded = fn_posenc_d(input_dirs_flat)  # [65536,27]
+    embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1)
+    # Network
+    outputs_flat = model(embedded)
+    outputs = torch.reshape(outputs_flat, list(
+        input_pts.shape[:-1]) + [outputs_flat.shape[-1]])
+    return outputs
 
 def test():
     near = 2. * torch.ones_like(torch.rand(1024, 1))

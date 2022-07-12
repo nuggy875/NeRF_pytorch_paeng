@@ -23,9 +23,9 @@ render:
   depth_near: 2.
   depth_far: 6.
 
+  n_rays_per_image: 1024
   n_coarse_pts_per_ray: 64
   n_fine_pts_per_ray: 128
-  n_rays_per_image: 1024
 
-  n_rays_net: 32768
+  chunk: 32
   n_pts_net: 65536

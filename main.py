@@ -116,7 +116,7 @@ def main(cfg: DictConfig):
         target_img = torch.Tensor(target_img).to(device)
         target_pose = poses[i_img, :3, :4]
         rays_o, rays_d = get_rays(
-            img_w, img_h, img_k, torch.Tensor(target_pose))
+            img_w, img_h, img_k, torch.Tensor(target_pose).to(device))
 
         # == Sampling Target (number of rays per image) (default : 1024) ==
         # HxW 의 Pixel 중에서 1024개의 랜덤 샘플링
@@ -136,7 +136,8 @@ def main(cfg: DictConfig):
                                   selected_coords[:, 1]]
 
         # == Render (get Pred) ==
-        rendering(img_h, img_w, img_k, rays=batch_rays, cfg=cfg)
+        rendering(rays=batch_rays, fn_posenc=fn_posenc,
+                  fn_posenc_d=fn_posenc_d, model=model, cfg=cfg)
 
         optimizer.zero_grad()
         # TODO >> LOSS
