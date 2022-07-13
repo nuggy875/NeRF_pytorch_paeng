@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 
@@ -28,6 +29,10 @@ def rendering(rays, fn_posenc, fn_posenc_d, model, cfg):
                 all_ret[k] = []
             all_ret[k].append(ret[k])
     all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}
+    k_extract = ['rgb_map', 'disp_map', 'acc_map']
+    ret_list = [all_ret[k] for k in k_extract]
+    ret_dict = {k: all_ret[k] for k in all_ret if k not in k_extract}
+    return ret_list + [ret_dict]
 
 
 def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
@@ -50,18 +55,43 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     input_pts = rays_o.unsqueeze(
         1) + rays_d.unsqueeze(1) * z_vals.unsqueeze(-1)
     input_pts_flat = torch.reshape(input_pts, [-1, 3])  # [1024,64,3]>[65536,3]
-    # POSITIONAL ENCODING
+    # > POSITIONAL ENCODING
     input_pts_embedded = fn_posenc(input_pts_flat)  # [65536,63]
-    # Direction
+    # > Direction
     input_dirs = viewdirs.unsqueeze(1).expand(input_pts.shape)
     input_dirs_flat = torch.reshape(input_dirs, [-1, 3])  # [65536,3]
     input_dirs_embedded = fn_posenc_d(input_dirs_flat)  # [65536,27]
     embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1)
-    # Network
-    outputs_flat = model(embedded)
+    # > Network
+    outputs_flat = model(embedded)  # [65536, 4] [color(3) + density(1)]
     outputs = torch.reshape(outputs_flat, list(
-        input_pts.shape[:-1]) + [outputs_flat.shape[-1]])
-    return outputs
+        input_pts.shape[:-1]) + [outputs_flat.shape[-1]])  # [1024, 64, 4]
+    # TODO FINE Network (output : [1024, 192(coarse:64 + fine:128), 4])
+    # TODO raw2outputs
+    rgb_map, disp_map, acc_map, weights, depth_map = volumne_rendering(
+        outputs, z_vals, rays_d)
+    ret = {'rgb_map': rgb_map, 'disp_map': disp_map,
+           'acc_map': acc_map, 'raw': outputs}
+    return ret
+
+
+def volumne_rendering(outputs, z_vals, rays_d):
+    rgb = outputs[..., :3]
+    rgb_sigmoid = torch.sigmoid(rgb)
+    alpha = 1 - torch.exp(-F.relu(rgb) * dists)  # raw to alpha
+
+    dists = z_vals[..., 1:] - z_vals[..., :-1]
+    weights = alpha * \
+        torch.cumprod(
+            torch.cat([torch.ones((alpha.shape[0], 1)), 1.-alpha + 1e-10], -1), -1)[:, :-1]
+    rgb_map = torch.sum(weights[..., None] * rgb, -2)  # [N_rays, 3]
+    depth_map = torch.sum(weights * z_vals, -1)
+    disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map),
+                            depth_map / torch.sum(weights, -1))
+    acc_map = torch.sum(weights, -1)
+    rgb_map = rgb_map + (1.-acc_map[..., None])
+    return rgb_map, disp_map, acc_map, weights, depth_map
+
 
 def test():
     near = 2. * torch.ones_like(torch.rand(1024, 1))

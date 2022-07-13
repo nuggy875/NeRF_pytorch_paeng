@@ -23,6 +23,12 @@ CONFIG_DIR = os.path.join(os.path.dirname(
 LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs")
 
 
+def img2mse(x, y): return torch.mean((x - y) ** 2)
+
+
+def mse2psnr(x): return -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
+
+
 def saveNumpyImage(img):
     img = np.array(img) * 255
     im = Image.fromarray(img.astype(np.uint8))
@@ -42,7 +48,7 @@ def get_rays(W, H, K, c2w):
     j = j.t()
     dirs = torch.stack([(i-K[0][2])/K[0][0],
                         -(j-K[1][2])/K[1][1],
-                        -torch.ones_like(i)], -1)  # FIXME why '-'?
+                        -torch.ones_like(i)], -1)
     rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
     rays_o = c2w[:3, -1].expand(rays_d.shape)
     return rays_o, rays_d
@@ -63,9 +69,6 @@ def main(cfg: DictConfig):
         images, poses, render_poses, hwf, i_split = load_blender(
             cfg.data.root, cfg.data.name, cfg.data.half_res)
         i_train, i_val, i_test = i_split
-
-        near = 2.
-        far = 6.
 
         # 뒤 흰배경 처리 (png 빈 부분을 불러오면 검은화면이 됨)
         # FIXME) alpha 값을 왜 없애는지 확인할 것 -> density 어디서 사용?
@@ -110,8 +113,8 @@ def main(cfg: DictConfig):
     start = 0
     for i in trange(start, N_iters):
         time_start = time.time()
-        # i_img = np.random.choice(i_train)
-        i_img = 0   # FIXME for testing -> 추후 랜덤 샘플링으로 교체
+        i_img = np.random.choice(i_train)
+        # i_img = 0   # FIXME for testing -> 추후 랜덤 샘플링으로 교체
         target_img = images[i_img]
         target_img = torch.Tensor(target_img).to(device)
         target_pose = poses[i_img, :3, :4]
@@ -136,40 +139,19 @@ def main(cfg: DictConfig):
                                   selected_coords[:, 1]]
 
         # == Render (get Pred) ==
-        rendering(rays=batch_rays, fn_posenc=fn_posenc,
-                  fn_posenc_d=fn_posenc_d, model=model, cfg=cfg)
+        pred_rgb, disp, acc, extras = rendering(rays=batch_rays, fn_posenc=fn_posenc,
+                                                fn_posenc_d=fn_posenc_d, model=model, cfg=cfg)
 
         optimizer.zero_grad()
         # TODO >> LOSS
-        # MSE (target_img_s, pred_rgb)
-        # MSE -> PSNR
-        # loss.backward
+        loss = img2mse(target_img_s, pred_rgb)
+        psnr = mse2psnr(loss)
+        loss.backward()
         optimizer.step()
+
+        print('LOSS : {} , PSNR : {}')
 
 
 if __name__ == "__main__":
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
     main()
-
-    # for testing RAYS
-    # W = 400
-    # H = 500
-    # F = 555.55
-
-    # K = np.array([
-    #     [F, 0, 0.5*W],
-    #     [0, F, 0.5*H],
-    #     [0, 0, 1]
-    # ])
-    # # [3, 4] 상태의 train_1 pose (0,0,0,1) 지움
-    # pose = np.array([[-0.9999021887779236, 0.004192245192825794, -0.013345719315111637, -0.05379832163453102], [-0.013988681137561798, -
-    #                 0.2996590733528137, 0.95394366979599, 3.845470428466797], [-4.656612873077393e-10, 0.9540371894836426, 0.29968830943107605, 1.2080823183059692]])
-    # pose = torch.Tensor(pose)
-    # get_rays(W, H, K, pose)
-
-    # ==========================================
-    # ray = torch.rand(400, 400, 3)
-    # c_ = torch.rand(1024, 2)*100
-    # c = c_.long()
-    # c1 = c[:, 0]
-    # c2 = c[:, 1]
-    # rays = ray[c1, c2]
