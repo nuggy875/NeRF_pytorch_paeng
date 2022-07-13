@@ -111,7 +111,8 @@ def main(cfg: DictConfig):
 
     N_iters = 200000
     start = 0
-    for i in trange(start, N_iters):
+    # for i in trange(start, N_iters):
+    for i in range(start, N_iters):
         time_start = time.time()
         i_img = np.random.choice(i_train)
         # i_img = 0   # FIXME for testing -> 추후 랜덤 샘플링으로 교체
@@ -149,7 +150,8 @@ def main(cfg: DictConfig):
         loss.backward()
         optimizer.step()
 
-        print('LOSS : {} , PSNR : {}')
+        if i % 1000 == 0:
+            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
 
 
 if __name__ == "__main__":

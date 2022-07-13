@@ -76,15 +76,26 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
 
 
 def volumne_rendering(outputs, z_vals, rays_d):
-    rgb = outputs[..., :3]
-    rgb_sigmoid = torch.sigmoid(rgb)
-    alpha = 1 - torch.exp(-F.relu(rgb) * dists)  # raw to alpha
+
+    def raw2alpha(raw, dists, act_fn=F.relu): return 1. - \
+        torch.exp(-act_fn(raw)*dists)
 
     dists = z_vals[..., 1:] - z_vals[..., :-1]
+    dists = torch.cat([dists, torch.Tensor([1e10]).expand(
+        dists[..., :1].shape)], -1)  # [N_rays, N_samples]
+    dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
+
+    rgb = outputs[..., :3]
+    rgb_sigmoid = torch.sigmoid(rgb)
+
+    alpha = raw2alpha(outputs[..., 3], dists)  # [N_rays, N_samples]
+
+    # alpha = 1. - torch.exp(-F.relu(rgb) * dists)  # raw to alpha
+
     weights = alpha * \
         torch.cumprod(
             torch.cat([torch.ones((alpha.shape[0], 1)), 1.-alpha + 1e-10], -1), -1)[:, :-1]
-    rgb_map = torch.sum(weights[..., None] * rgb, -2)  # [N_rays, 3]
+    rgb_map = torch.sum(weights[..., None] * rgb_sigmoid, -2)  # [N_rays, 3]
     depth_map = torch.sum(weights * z_vals, -1)
     disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map),
                             depth_map / torch.sum(weights, -1))
