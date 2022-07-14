@@ -13,7 +13,7 @@ from dataset import load_blender
 from model import NeRF, get_positional_encoder
 from render import rendering
 
-device_ids = [0]
+device_ids = [1]
 device = torch.device('cuda:{}'.format(min(device_ids))
                       if torch.cuda.is_available() else 'cpu')
 np.random.seed(0)
@@ -79,7 +79,6 @@ def main(cfg: DictConfig):
 
         img_h, img_w, img_focal = hwf
         img_h, img_w = int(img_h), int(img_w)
-        # FIXME) K의 용도 확인할 것
         img_k = np.array([
             [img_focal, 0, 0.5*img_w],
             [0, img_focal, 0.5*img_h],
@@ -93,7 +92,7 @@ def main(cfg: DictConfig):
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
 
     # output_ch = 5 if cfg.model.n_importance > 0 else 4
-    skips = [4]     # FIXME what is this for?
+    skips = [4]
 
     # == 3. DEFINE MODEL (NeRF) ==
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
@@ -111,11 +110,11 @@ def main(cfg: DictConfig):
 
     N_iters = 200000
     start = 0
-    # for i in trange(start, N_iters):
-    for i in range(start, N_iters):
+    result_best = {'i': 0, 'loss': 0, 'psnr': 0}
+
+    for i in trange(start, N_iters):
         time_start = time.time()
         i_img = np.random.choice(i_train)
-        # i_img = 0   # FIXME for testing -> 추후 랜덤 샘플링으로 교체
         target_img = images[i_img]
         target_img = torch.Tensor(target_img).to(device)
         target_pose = poses[i_img, :3, :4]
@@ -144,16 +143,24 @@ def main(cfg: DictConfig):
                                                 fn_posenc_d=fn_posenc_d, model=model, cfg=cfg)
 
         optimizer.zero_grad()
-        # TODO >> LOSS
         loss = img2mse(target_img_s, pred_rgb)
         psnr = mse2psnr(loss)
         loss.backward()
         optimizer.step()
 
+        if result_best['psnr'] < psnr:
+            result_best['i'] = i
+            result_best['loss'] = loss
+            result_best['psnr'] = psnr
+
         if i % 1000 == 0:
             print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
+
+    print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
+        result_best['i'], result_best['loss'], result_best['psnr']))
 
 
 if __name__ == "__main__":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.cuda.set_device(device)
     main()
