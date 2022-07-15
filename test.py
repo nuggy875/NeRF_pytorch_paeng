@@ -3,4 +3,5 @@ import torch
 
 
 def test(cfg):
-    print('testing')
+    with torch.no_grad():
+        print('testing')
