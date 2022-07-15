@@ -154,11 +154,11 @@ def main(cfg: DictConfig):
             result_best['loss'] = loss
             result_best['psnr'] = psnr
 
-        if i % cfg.index.print == 0:
+        if i % cfg.training.idx_print == 0:
             print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
 
         # ====  T E S T I N G  ====
-        if i % cfg.index.test == 0 and i > 0:
+        if i % cfg.training.idx_test == 0 and i > 0:
             test(cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(

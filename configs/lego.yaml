@@ -3,10 +3,6 @@ visualization:
   visdom_port: "8900"
   visdom_step: 100
 
-index:
-  print: 1000
-  test: 1000
-
 data:
   name: "lego"
   root: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
@@ -17,6 +13,10 @@ data:
 training:
   N_iters: 200000
   lr: 5e-4
+  idx_print: 1000
+  idx_test: 50000
+  idx_visdom: 100
+  
 
 model:
   netDepth: 8
