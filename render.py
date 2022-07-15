@@ -55,7 +55,8 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     # ===== RUN NETWORK =====
     input_pts = rays_o.unsqueeze(
         1) + rays_d.unsqueeze(1) * z_vals.unsqueeze(-1)
-    input_pts_flat = torch.reshape(input_pts, [-1, 3])  # [1024,64,3]>[65536,3]
+    # [1024,64,3]>[65536,3] #TODO VISiualization
+    input_pts_flat = torch.reshape(input_pts, [-1, 3])
     # > POSITIONAL ENCODING (x)
     input_pts_embedded = fn_posenc(input_pts_flat)  # [65536,63]
     # > POSITIONAL ENCODING (d)

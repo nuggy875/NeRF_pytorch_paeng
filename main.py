@@ -12,6 +12,7 @@ from tqdm import tqdm, trange
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
 from render import rendering
+from test import test
 
 device_ids = [1]
 device = torch.device('cuda:{}'.format(min(device_ids))
@@ -50,6 +51,7 @@ def get_rays(W, H, K, c2w):
                         -(j-K[1][2])/K[1][1],
                         -torch.ones_like(i)], -1)
     rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+    # rays_d = dirs @ c2w[:3, :3].T # TODO dot product test
     rays_o = c2w[:3, -1].expand(rays_d.shape)
     return rays_o, rays_d
 
@@ -108,12 +110,10 @@ def main(cfg: DictConfig):
     print('TEST views are', i_test)
     print('VAL views are', i_val)
 
-    N_iters = 200000
     start = 0
     result_best = {'i': 0, 'loss': 0, 'psnr': 0}
 
-    for i in trange(start, N_iters):
-        time_start = time.time()
+    for i in trange(start, cfg.training.N_iters):
         i_img = np.random.choice(i_train)
         target_img = images[i_img]
         target_img = torch.Tensor(target_img).to(device)
@@ -148,13 +148,18 @@ def main(cfg: DictConfig):
         loss.backward()
         optimizer.step()
 
+        # == GET Best result for training ==
         if result_best['psnr'] < psnr:
             result_best['i'] = i
             result_best['loss'] = loss
             result_best['psnr'] = psnr
 
-        if i % 1000 == 0:
+        if i % cfg.index.print == 0:
             print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
+
+        # ====  T E S T I N G  ====
+        if i % cfg.index.test == 0 and i > 0:
+            test(cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))

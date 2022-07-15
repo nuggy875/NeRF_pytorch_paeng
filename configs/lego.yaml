@@ -3,6 +3,10 @@ visualization:
   visdom_port: "8900"
   visdom_step: 100
 
+index:
+  print: 1000
+  test: 1000
+
 data:
   name: "lego"
   root: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
@@ -11,8 +15,7 @@ data:
   white_bkgd: True
 
 training:
-  batch_size: 2
-  epoch: 300
+  N_iters: 200000
   lr: 5e-4
 
 model:
@@ -24,7 +27,7 @@ render:
   depth_far: 6.
 
   n_rays_per_image: 1024
-  n_coarse_pts_per_ray: 256
+  n_coarse_pts_per_ray: 512
   n_fine_pts_per_ray: 128
 
   chunk: 32
