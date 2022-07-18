@@ -18,7 +18,7 @@ def rendering(rays, fn_posenc, fn_posenc_d, model, cfg):
     near = cfg.render.depth_near * torch.ones_like(rays_d[..., :1])
     far = cfg.render.depth_far * torch.ones_like(rays_d[..., :1])
     rays = torch.cat([rays_o, rays_d, near, far, viewdirs], -1)  # [1024, 11]
-    chunk = cfg.render.n_rays_per_image * cfg.render.chunk
+    chunk = cfg.render.chunk
 
     # batchify rays -> n_rays_per_image(1024)를 chunk(1024x32) 로 batch 나누기
     all_ret = {}

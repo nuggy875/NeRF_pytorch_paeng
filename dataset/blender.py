@@ -45,7 +45,7 @@ def pose_spherical(theta, phi, radius):
     return c2w
 
 
-def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: bool = True, testskip: int = 8):
+def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: bool = True, testskip: int = 8, bkg_white: bool = True):
     print(f"\n\nLoading Dataset {data_name}, from {data_root}")
     splits = ['train', 'val', 'test']
     metas = {}
@@ -102,7 +102,21 @@ def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: b
             imgs_half_res[i] = cv2.resize(
                 img, (W, H), interpolation=cv2.INTER_AREA)
         imgs = imgs_half_res
-    return imgs, poses, render_poses, [H, W, focal], i_split
+    
+    H, W = int(H), int(W)
+    K = np.array([
+            [focal, 0, 0.5*W],
+            [0, focal, 0.5*H],
+            [0, 0, 1]
+        ])
+
+    # 뒤 흰배경 처리 (png 빈 부분을 불러오면 검은화면이 됨)
+    # FIXME) alpha 값을 왜 없애는지 확인할 것 -> density 어디서 사용?
+    if bkg_white:
+        imgs = imgs[..., :3]*imgs[..., -1:] + (1.-imgs[..., -1:])
+    else:
+        imgs = imgs[..., :3]
+    return imgs, poses, render_poses, [H, W, K], i_split
 
 
 if __name__ == "__main__":

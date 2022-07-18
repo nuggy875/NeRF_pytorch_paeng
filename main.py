@@ -4,9 +4,9 @@ import time
 import numpy as np
 import torch
 import hydra
+from omegaconf import DictConfig
 import visdom
 from PIL import Image
-from omegaconf import DictConfig
 from tqdm import tqdm, trange
 
 from dataset import load_blender
@@ -14,7 +14,7 @@ from model import NeRF, get_positional_encoder
 from render import rendering
 from test import test
 
-device_ids = [0]
+device_ids = [1]
 device = torch.device('cuda:{}'.format(min(device_ids))
                       if torch.cuda.is_available() else 'cpu')
 np.random.seed(0)
@@ -68,24 +68,10 @@ def main(cfg: DictConfig):
 
     # == 1. LOAD DATASET (blender) ==
     if cfg.data.type == 'blender':
-        images, poses, render_poses, hwf, i_split = load_blender(
-            cfg.data.root, cfg.data.name, cfg.data.half_res)
+        images, poses, render_poses, hwk, i_split = load_blender(
+            cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
         i_train, i_val, i_test = i_split
-
-        # 뒤 흰배경 처리 (png 빈 부분을 불러오면 검은화면이 됨)
-        # FIXME) alpha 값을 왜 없애는지 확인할 것 -> density 어디서 사용?
-        if cfg.data.white_bkgd:
-            images = images[..., :3]*images[..., -1:] + (1.-images[..., -1:])
-        else:
-            images = images[..., :3]
-
-        img_h, img_w, img_focal = hwf
-        img_h, img_w = int(img_h), int(img_w)
-        img_k = np.array([
-            [img_focal, 0, 0.5*img_w],
-            [0, img_focal, 0.5*img_h],
-            [0, 0, 1]
-        ])
+        img_h, img_w, img_k = hwk
 
     # saveNumpyImage(images[0])         # Save Image for testing
 
@@ -157,9 +143,19 @@ def main(cfg: DictConfig):
         if i % cfg.training.idx_print == 0:
             print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
 
+        if i % cfg.training.idx_save == 0 and i > 0:
+            checkpoint = {'idx': i,
+                          'model_state_dict': model.state_dict(),
+                          'optimizer_state_dict': optimizer.state_dict()}
+            torch.save(checkpoint, os.path.join(
+                LOG_DIR, cfg.training.name, cfg.training.name+'.{}.pth.tar'.format(i)))
+
         # ====  T E S T I N G  ====
         if i % cfg.training.idx_test == 0 and i > 0:
-            test(cfg)
+            test(idx=i, model=model,
+                 test_img=torch.Tensor(images[i_test]).to(device),
+                 test_pose=torch.Tensor(poses[i_test]).to(device),
+                 hwk=hwk, logdir=LOG_DIR, cfg=cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))

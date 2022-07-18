@@ -11,9 +11,11 @@ data:
   white_bkgd: True
 
 training:
+  name: "testing"
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
+  idx_save: 10000
   idx_test: 50000
   idx_visdom: 100
   
@@ -26,8 +28,8 @@ render:
   depth_far: 6.
 
   n_rays_per_image: 1024
-  n_coarse_pts_per_ray: 512
+  n_coarse_pts_per_ray: 1024
   n_fine_pts_per_ray: 128
 
-  chunk: 32
+  chunk: 32786
   n_pts_net: 65536
