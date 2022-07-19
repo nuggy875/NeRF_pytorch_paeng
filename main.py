@@ -132,7 +132,7 @@ def main(cfg: DictConfig):
 
         # ====  T E S T I N G  ====
         if i % cfg.training.idx_test == 0 and i > 0:
-            test(idx=i, model=model,
+            test(idx=i, fn_posenc=fn_posenc, fn_posenc_d=fn_posenc_d, model=model,
                  test_imgs=torch.Tensor(images[i_test]).to(device),
                  test_poses=torch.Tensor(poses[i_test]).to(device),
                  hwk=hwk, logdir=LOG_DIR, cfg=cfg)

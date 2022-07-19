@@ -11,11 +11,11 @@ data:
   white_bkgd: True
 
 training:
-  name: "testing"
+  name: "nerf_0719_1"
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
-  idx_save: 500
+  idx_save: 50000
   idx_test: 50000
   idx_visdom: 100
   

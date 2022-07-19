@@ -18,19 +18,28 @@ device = torch.device('cuda:{}'.format(min(device_ids))
                       if torch.cuda.is_available() else 'cpu')
 CONFIG_DIR = os.path.join(os.path.dirname(
     os.path.realpath(__file__)), "configs")
+LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs")
 
 
 def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, logdir, cfg):
-
     model.eval()
+    print(logdir)
+    print(os.path.join(logdir, cfg.training.name,
+          cfg.training.name+'_{}.pth.tar'.format(idx)))
     checkpoint = torch.load(os.path.join(
         logdir, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
+
+    savedir = os.path.join(
+        logdir, cfg.training.name, cfg.training.name+'_{}'.format(idx))
+    os.makedirs(savedir, exist_ok=True)
 
     img_h, img_w, img_k = hwk
 
     rgbs = []
     disps = []
+    losses = []
+    psnrs = []
     result_best = {'i': 0, 'loss': 0, 'psnr': 0}
     with torch.no_grad():
         for i, test_pose in enumerate(tqdm(test_poses)):
@@ -42,12 +51,11 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, logdir,
                                                              fn_posenc_d=fn_posenc_d,
                                                              model=model,
                                                              cfg=cfg)
-            rgbs = torch.reshape(pred_rgb, [img_h, img_w, 3])
-            rgb8 = to8b(rgbs)
+            # save test image
+            rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
+            rgb_np = rgb.cpu().numpy()
+            rgb8 = to8b(rgb_np)
 
-            savedir = os.path.join(
-                logdir, cfg.training.name, 'test_result_{}'.format(idx))
-            os.makedirs(savedir, exist_ok=True)
             savefilename = os.path.join(savedir, '{:03d}.png'.format(i))
             imageio.imwrite(savefilename, rgb8)
 
@@ -56,16 +64,26 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, logdir,
             img_loss = img2mse(pred_rgb, target_img_flat)
             loss = img_loss
             psnr = mse2psnr(img_loss)
+            losses.append(img_loss)
+            psnrs.append(psnr)
             print('idx : {} | Loss : {} | PSNR : {}'.format(i, img_loss, psnr))
+
+            # save best result
             if result_best['psnr'] < psnr:
                 result_best['i'] = i
                 result_best['loss'] = loss
                 result_best['psnr'] = psnr
-            rgbs.append(pred_rgb.cpu().numpy())
-            disps.append(disp.cpu().numpy())
+            # rgbs.append(pred_rgb.cpu().numpy())
+            # disps.append(disp.cpu().numpy())
 
     print('BEST Result for Testing) idx : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))
+
+    f = open(os.path.join(savedir, "_result.txt"), 'w')
+    for i in range(len(losses)):
+        line = 'idx:{}\tloss:{}\tpsnr:{}\n'.format(i, losses[i], psnrs[i])
+        f.write(line)
+    f.close()  # 쓰기모드 닫기
 
 
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
@@ -83,7 +101,7 @@ def main(cfg: DictConfig):
     test(1000, fn_posenc, fn_posenc_d, model,
          torch.Tensor(images[i_test]).to(device),
          torch.Tensor(poses[i_test]).to(device),
-         hwk, os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs"), cfg)
+         hwk, LOG_DIR, cfg)
 
 
 if __name__ == '__main__':
