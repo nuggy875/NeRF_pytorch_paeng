@@ -1,23 +1,44 @@
+from re import L
 import torch
 import torch.nn.functional as F
+import numpy as np
 import matplotlib.pyplot as plt
 
 
-def rendering(rays, fn_posenc, fn_posenc_d, model, cfg):
+def get_rays(W, H, K, c2w):
     '''
-    rays : rays_o [1024, 3] , rays_d [1024, 3]
+    img_k = [3,3] pose = [3,4]
+    Transpose Image Plane Coordinate to Normalized Plane ([x',y',1] -> [u,v,1])
+    # Rotate ray directions from camera frame to the world frame
+    # dot product, equals to: [c2w.dot(dir) for dir in dirs]
+    # Translate camera frame's origin to the world frame. It is the origin of all rays.
     '''
-    rays_o, rays_d = rays
+    i, j = torch.meshgrid(torch.linspace(0, W-1, W), torch.linspace(0, H-1, H))
+    i = i.t()
+    j = j.t()
+    dirs = torch.stack([(i-K[0][2])/K[0][0],
+                        -(j-K[1][2])/K[1][1],
+                        -torch.ones_like(i)], -1)
+    rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+    # rays_d = dirs @ c2w[:3, :3].T # TODO dot product test
+    rays_o = c2w[:3, -1].expand(rays_d.shape)
+    return rays_o, rays_d
+
+
+def preprocess_rays(rays_o, rays_d, cfg):
     viewdirs = rays_d
     viewdirs = viewdirs / torch.norm(viewdirs, dim=-1, keepdim=True)  # 단위벡터화
-    viewdirs = torch.reshape(viewdirs, [-1, 3]).float()
-    sh = rays_d.shape
-    # create ray batch
     rays_o = torch.reshape(rays_o, [-1, 3]).float()
     rays_d = torch.reshape(rays_d, [-1, 3]).float()
+    viewdirs = torch.reshape(viewdirs, [-1, 3]).float()
     near = cfg.render.depth_near * torch.ones_like(rays_d[..., :1])
     far = cfg.render.depth_far * torch.ones_like(rays_d[..., :1])
     rays = torch.cat([rays_o, rays_d, near, far, viewdirs], -1)  # [1024, 11]
+    return rays
+
+
+def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, cfg):
+    
     chunk = cfg.render.chunk
 
     # batchify rays -> n_rays_per_image(1024)를 chunk(1024x32) 로 batch 나누기
@@ -46,7 +67,6 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     t_vals = torch.linspace(0., 1., steps=cfg.render.n_coarse_pts_per_ray)
     z_vals = near * (1.-t_vals) + far * (t_vals)
     z_vals = z_vals.expand([N_rays, cfg.render.n_coarse_pts_per_ray])
-    # TODO 이게 대체 뭐하는짓...? 분석 필요
     mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
     upper = torch.cat([mids, z_vals[..., -1:]], -1)
     lower = torch.cat([z_vals[..., :1], mids], -1)

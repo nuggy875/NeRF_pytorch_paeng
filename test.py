@@ -8,25 +8,38 @@ from tqdm import tqdm, trange
 
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
+from render import run_model_batchify, get_rays, preprocess_rays
 
-device_ids = [1]
+device_ids = [0]
 device = torch.device('cuda:{}'.format(min(device_ids))
                       if torch.cuda.is_available() else 'cpu')
 CONFIG_DIR = os.path.join(os.path.dirname(
     os.path.realpath(__file__)), "configs")
 
 
-def test(idx, model, test_img, test_pose, hwk, logdir, cfg):
+def test(idx, fn_posenc, fn_posenc_d, model, test_img, test_pose, hwk, logdir, cfg):
 
     model.eval()
+    # checkpoint = torch.load(os.path.join(
+    #     logdir, cfg.training.name, cfg.training.name+'.{}.pth.tar'.format(idx)))
+    # model.load_state_dict(checkpoint['model_state_dict'])
 
-    checkpoint = torch.load(os.path.join(
-        logdir, cfg.training.name, cfg.training.name+'.{}.pth.tar'.format(idx)))
-    model.load_state_dict(checkpoint['model_state_dict'])
-
+    img_h, img_w, img_k = hwk
+    
+    rgbs = []
+    disps = []
     with torch.no_grad():
         for i, pose in enumerate(tqdm(test_pose)):
             t = time.time()
+            rays_o, rays_d = get_rays(img_w, img_h, img_k, torch.Tensor(pose[:3][:4]).to(device))
+            rays = preprocess_rays(rays_o, rays_d, cfg)
+            pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
+                                                            fn_posenc=fn_posenc,
+                                                            fn_posenc_d=fn_posenc_d,
+                                                            model=model,
+                                                            cfg=cfg)
+            rgbs.append(pred_rgb.cpu().numpy())
+            disps.append(disp.cpu().numpy())
 
     testdir = os.path.join(logdir, cfg.training.name,
                            'test_result_{:06d}'.format(idx))
@@ -45,7 +58,7 @@ def main(cfg: DictConfig):
     skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
-    test(20000, model,
+    test(20000, fn_posenc, fn_posenc_d, model, 
          torch.Tensor(images[i_test]).to(device),
          torch.Tensor(poses[i_test]).to(device),
          hwk, os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs"), cfg)
