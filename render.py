@@ -1,4 +1,5 @@
 from re import L
+from tkinter import E
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -38,9 +39,12 @@ def preprocess_rays(rays_o, rays_d, cfg):
 
 
 def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, cfg):
-    
-    chunk = cfg.render.chunk
+    '''
+    chunk_ray : sample 된 ray 개수가 많을 때 cuda memory 이슈가 있기 때문에 chunk로 batchify하여 학습합니다.
+                특히 test 할때는 ray의 개수가 이미지 전체이기 때문에 (ex 400x400) batchify가 필요.
+    '''
 
+    chunk = cfg.render.chunk_ray
     # batchify rays -> n_rays_per_image(1024)를 chunk(1024x32) 로 batch 나누기
     all_ret = {}
     for i in range(0, rays.shape[0], chunk):
@@ -57,6 +61,9 @@ def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, cfg):
 
 
 def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
+    '''
+    chunk_pts : input(rays x pts_per_ray)이 너무 큰 경우 chunk_pts를 기준으로 batchify 하여 model에 넣습니다.
+    '''
     N_rays = ray_batch.shape[0]
     rays_o, rays_d = ray_batch[:, 0:3], ray_batch[:, 3:6]
     near = ray_batch[..., 6].unsqueeze(-1)
@@ -85,7 +92,11 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     input_dirs_embedded = fn_posenc_d(input_dirs_flat)  # [65536,27]
     embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1)
     # > Network
-    outputs_flat = model(embedded)  # [65536, 4] [color(3) + density(1)]
+    # batchify
+    chunk = cfg.render.chunk_ray
+    outputs_flat = torch.cat([model(embedded[i:i+chunk])
+                             for i in range(0, embedded.shape[0], chunk)], 0)
+    # outputs_flat = model(embedded)  # [65536, 4] [color(3) + density(1)]
     outputs = torch.reshape(outputs_flat, list(
         input_pts.shape[:-1]) + [outputs_flat.shape[-1]])  # [1024, 64, 4]
     # TODO FINE Network (N_f) (output : [1024, 192(coarse:64 + fine:128), 4])

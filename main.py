@@ -12,6 +12,7 @@ from tqdm import tqdm, trange
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
 from render import run_model_batchify, get_rays, preprocess_rays
+from utils import img2mse, mse2psnr
 from test import test
 
 device_ids = [0]
@@ -22,12 +23,6 @@ np.random.seed(0)
 CONFIG_DIR = os.path.join(os.path.dirname(
     os.path.realpath(__file__)), "configs")
 LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs")
-
-
-def img2mse(x, y): return torch.mean((x - y) ** 2)
-
-
-def mse2psnr(x): return -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
 
 
 def saveNumpyImage(img):
@@ -106,10 +101,10 @@ def main(cfg: DictConfig):
         rays = preprocess_rays(rays_o, rays_d, cfg)
         # == Render (get Pred) ==
         pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
-                                                        fn_posenc=fn_posenc,
-                                                        fn_posenc_d=fn_posenc_d,
-                                                        model=model,
-                                                        cfg=cfg)
+                                                         fn_posenc=fn_posenc,
+                                                         fn_posenc_d=fn_posenc_d,
+                                                         model=model,
+                                                         cfg=cfg)
 
         optimizer.zero_grad()
         loss = img2mse(target_img_s, pred_rgb)
@@ -132,13 +127,14 @@ def main(cfg: DictConfig):
                           'optimizer_state_dict': optimizer.state_dict()}
             save_path = os.path.join(LOG_DIR, cfg.training.name)
             os.makedirs(save_path, exist_ok=True)
-            torch.save(checkpoint, os.path.join(save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
+            torch.save(checkpoint, os.path.join(
+                save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
 
         # ====  T E S T I N G  ====
         if i % cfg.training.idx_test == 0 and i > 0:
             test(idx=i, model=model,
-                 test_img=torch.Tensor(images[i_test]).to(device),
-                 test_pose=torch.Tensor(poses[i_test]).to(device),
+                 test_imgs=torch.Tensor(images[i_test]).to(device),
+                 test_poses=torch.Tensor(poses[i_test]).to(device),
                  hwk=hwk, logdir=LOG_DIR, cfg=cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
