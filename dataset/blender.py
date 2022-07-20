@@ -111,11 +111,13 @@ def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: b
         ])
 
     # 뒤 흰배경 처리 (png 빈 부분을 불러오면 검은화면이 됨)
-    # FIXME) alpha 값을 왜 없애는지 확인할 것 -> density 어디서 사용?
     if bkg_white:
         imgs = imgs[..., :3]*imgs[..., -1:] + (1.-imgs[..., -1:])
     else:
         imgs = imgs[..., :3]
+    
+    # saveNumpyImage(imgs[0])         # Save Image for testing
+
     return imgs, poses, render_poses, [H, W, K], i_split
 
 

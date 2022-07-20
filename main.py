@@ -12,24 +12,12 @@ from tqdm import tqdm, trange
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
 from render import run_model_batchify, get_rays, preprocess_rays
-from utils import img2mse, mse2psnr
+from utils import img2mse, mse2psnr, saveNumpyImage
 from test import test
 
-device_ids = [0]
-device = torch.device('cuda:{}'.format(min(device_ids))
-                      if torch.cuda.is_available() else 'cpu')
+from configs.config import CONFIG_DIR, LOG_DIR, device
+
 np.random.seed(0)
-
-CONFIG_DIR = os.path.join(os.path.dirname(
-    os.path.realpath(__file__)), "configs")
-LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs")
-
-
-def saveNumpyImage(img):
-    img = np.array(img) * 255
-    im = Image.fromarray(img.astype(np.uint8))
-    im.save(LOG_DIR+'/white_bkgd_false.jpg')
-
 
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
 def main(cfg: DictConfig):
@@ -48,7 +36,6 @@ def main(cfg: DictConfig):
         i_train, i_val, i_test = i_split
         img_h, img_w, img_k = hwk
 
-    # saveNumpyImage(images[0])         # Save Image for testing
 
     # == 2. POSITIONAL ENCODING - Define Function ==
     fn_posenc, input_ch = get_positional_encoder(L=10)
