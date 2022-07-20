@@ -9,57 +9,48 @@ import imageio
 
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
-from render import run_model_batchify, get_rays, preprocess_rays
+from process import run_model_batchify, get_rays, preprocess_rays
 from utils import img2mse, mse2psnr, to8b
 
-
-device_ids = [0]
-device = torch.device('cuda:{}'.format(min(device_ids))
-                      if torch.cuda.is_available() else 'cpu')
-CONFIG_DIR = os.path.join(os.path.dirname(
-    os.path.realpath(__file__)), "configs")
-LOG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "logs")
+from configs.config import CONFIG_DIR, LOG_DIR, device
 
 
-def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, logdir, cfg):
+def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
     model.eval()
-    print(logdir)
-    print(os.path.join(logdir, cfg.training.name,
-          cfg.training.name+'_{}.pth.tar'.format(idx)))
     checkpoint = torch.load(os.path.join(
-        logdir, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
+        LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
 
-    savedir = os.path.join(
-        logdir, cfg.training.name, cfg.training.name+'_{}'.format(idx))
-    os.makedirs(savedir, exist_ok=True)
+    save_test_dir = os.path.join(
+        LOG_DIR, cfg.training.name, cfg.training.name+'_{}'.format(idx), 'test_result')
+    os.makedirs(save_test_dir, exist_ok=True)
 
     img_h, img_w, img_k = hwk
 
-    rgbs = []
-    disps = []
     losses = []
     psnrs = []
     result_best = {'i': 0, 'loss': 0, 'psnr': 0}
     with torch.no_grad():
         for i, test_pose in enumerate(tqdm(test_poses)):
-            t = time.time()
-            rays_o, rays_d = get_rays(img_w, img_h, img_k, test_pose[:3][:4])
-            rays = preprocess_rays(rays_o, rays_d, cfg)
-            pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
-                                                             fn_posenc=fn_posenc,
-                                                             fn_posenc_d=fn_posenc_d,
-                                                             model=model,
-                                                             cfg=cfg)
-            # save test image
+            rays_o, rays_d = get_rays(
+                img_w, img_h, img_k, test_pose[:3][:4])  # [1]
+            rays = preprocess_rays(rays_o, rays_d, cfg)  # [3]
+            pred_rgb, pred_disp, pred_acc, predextras = run_model_batchify(rays=rays,
+                                                                           fn_posenc=fn_posenc,
+                                                                           fn_posenc_d=fn_posenc_d,
+                                                                           model=model,
+                                                                           cfg=cfg)
+            # SAVE test image
             rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
+            disp = torch.reshape(pred_disp, [img_h, img_w])
             rgb_np = rgb.cpu().numpy()
-            rgb8 = to8b(rgb_np)
+            disp_np = disp.cpu().numpy()
 
-            savefilename = os.path.join(savedir, '{:03d}.png'.format(i))
+            rgb8 = to8b(rgb_np)
+            savefilename = os.path.join(save_test_dir, '{:03d}.png'.format(i))
             imageio.imwrite(savefilename, rgb8)
 
-            # get loss & psnr
+            # GET loss & psnr
             target_img_flat = torch.reshape(test_imgs[i], [-1, 3])
             img_loss = img2mse(pred_rgb, target_img_flat)
             loss = img_loss
@@ -73,17 +64,55 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, logdir,
                 result_best['i'] = i
                 result_best['loss'] = loss
                 result_best['psnr'] = psnr
-            # rgbs.append(pred_rgb.cpu().numpy())
-            # disps.append(disp.cpu().numpy())
 
     print('BEST Result for Testing) idx : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))
 
-    f = open(os.path.join(savedir, "_result.txt"), 'w')
+    f = open(os.path.join(save_test_dir, "_result.txt"), 'w')
     for i in range(len(losses)):
         line = 'idx:{}\tloss:{}\tpsnr:{}\n'.format(i, losses[i], psnrs[i])
         f.write(line)
-    f.close()  # 쓰기모드 닫기
+    f.close()
+
+
+def render(idx, fn_posenc, fn_posenc_d, model, render_poses, hwk, cfg):
+    model.eval()
+    checkpoint = torch.load(os.path.join(
+        LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
+    model.load_state_dict(checkpoint['model_state_dict'])
+
+    save_render_dir = os.path.join(
+        LOG_DIR, cfg.training.name, cfg.training.name+'_{}'.format(idx), 'render_result')
+    os.makedirs(save_render_dir, exist_ok=True)
+
+    img_h, img_w, img_k = hwk
+
+    rgbs = []
+    disps = []
+    with torch.no_grad():
+        for i, test_pose in enumerate(tqdm(render_poses)):
+            rays_o, rays_d = get_rays(
+                img_w, img_h, img_k, test_pose[:3][:4])  # [1]
+            rays = preprocess_rays(rays_o, rays_d, cfg)  # [3]
+            pred_rgb, pred_disp, pred_acc, predextras = run_model_batchify(rays=rays,
+                                                                           fn_posenc=fn_posenc,
+                                                                           fn_posenc_d=fn_posenc_d,
+                                                                           model=model,
+                                                                           cfg=cfg)
+            # save test image
+            rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
+            disp = torch.reshape(pred_disp, [img_h, img_w])
+            rgb_np = rgb.cpu().numpy()
+            disp_np = disp.cpu().numpy()
+            rgbs.append(rgb_np)
+            disps.append(disp_np)
+
+        rgbs = np.stack(rgbs, 0)
+        disps = np.stack(disps, 0)
+    imageio.mimwrite(os.path.join(save_render_dir, "rgb.mp4"),
+                     to8b(rgbs), fps=30, quality=8)
+    imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
+                     to8b(disps / np.max(disps)), fps=30, quality=8)
 
 
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
@@ -98,10 +127,22 @@ def main(cfg: DictConfig):
     skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
-    test(1000, fn_posenc, fn_posenc_d, model,
-         torch.Tensor(images[i_test]).to(device),
-         torch.Tensor(poses[i_test]).to(device),
-         hwk, LOG_DIR, cfg)
+    # test(idx=100000,
+    #      fn_posenc=fn_posenc,
+    #      fn_posenc_d=fn_posenc_d,
+    #      model=model,
+    #      test_imgs=torch.Tensor(images[i_test]).to(device),
+    #      test_poses=torch.Tensor(poses[i_test]).to(device),
+    #      hwk=hwk,
+    #      cfg=cfg)
+
+    render(idx=100000,
+           fn_posenc=fn_posenc,
+           fn_posenc_d=fn_posenc_d,
+           model=model,
+           render_poses=render_poses,
+           hwk=hwk,
+           cfg=cfg)
 
 
 if __name__ == '__main__':

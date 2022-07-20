@@ -11,13 +11,14 @@ from tqdm import tqdm, trange
 
 from dataset import load_blender
 from model import NeRF, get_positional_encoder
-from render import run_model_batchify, get_rays, preprocess_rays
+from process import run_model_batchify, get_rays, preprocess_rays
 from utils import img2mse, mse2psnr, saveNumpyImage
-from test import test
+from test import test, render
 
 from configs.config import CONFIG_DIR, LOG_DIR, device
 
 np.random.seed(0)
+
 
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
 def main(cfg: DictConfig):
@@ -35,7 +36,6 @@ def main(cfg: DictConfig):
             cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
         i_train, i_val, i_test = i_split
         img_h, img_w, img_k = hwk
-
 
     # == 2. POSITIONAL ENCODING - Define Function ==
     fn_posenc, input_ch = get_positional_encoder(L=10)
@@ -58,10 +58,10 @@ def main(cfg: DictConfig):
     print('TEST views are', i_test)
     print('VAL views are', i_val)
 
-    start = 0
+    start = 1
     result_best = {'i': 0, 'loss': 0, 'psnr': 0}
 
-    for i in trange(start, cfg.training.N_iters):
+    for i in trange(start, cfg.training.N_iters+1):
         # [1] Get Target & Rays         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         i_img = np.random.choice(i_train)
         target_img = images[i_img]
@@ -86,7 +86,7 @@ def main(cfg: DictConfig):
                                   selected_coords[:, 1]]
         # [3] Preprocess Rays   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         rays = preprocess_rays(rays_o, rays_d, cfg)
-        # == Render (get Pred) ==
+        # [4] Run Model ==
         pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
                                                          fn_posenc=fn_posenc,
                                                          fn_posenc_d=fn_posenc_d,
@@ -119,10 +119,22 @@ def main(cfg: DictConfig):
 
         # ====  T E S T I N G  ====
         if i % cfg.training.idx_test == 0 and i > 0:
-            test(idx=i, fn_posenc=fn_posenc, fn_posenc_d=fn_posenc_d, model=model,
+            test(idx=i,
+                 fn_posenc=fn_posenc,
+                 fn_posenc_d=fn_posenc_d,
+                 model=model,
                  test_imgs=torch.Tensor(images[i_test]).to(device),
                  test_poses=torch.Tensor(poses[i_test]).to(device),
-                 hwk=hwk, logdir=LOG_DIR, cfg=cfg)
+                 hwk=hwk,
+                 cfg=cfg)
+        if i % cfg.training.idx_video == 0 and i > 0:
+            render(idx=i,
+                   fn_posenc=fn_posenc,
+                   fn_posenc_d=fn_posenc_d,
+                   model=model,
+                   render_poses=render_poses,
+                   hwk=hwk,
+                   cfg=cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))
