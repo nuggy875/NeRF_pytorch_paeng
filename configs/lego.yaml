@@ -11,7 +11,7 @@ data:
   white_bkgd: True
 
 training:
-  name: "lego_0720_1"
+  name: "lego_0720_2"
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
@@ -28,7 +28,7 @@ render:
   depth_near: 2.
   depth_far: 6.
 
-  n_rays_per_image: 1024
+  n_rays_per_image: 2048
   n_coarse_pts_per_ray: 512
   n_fine_pts_per_ray: 128
 
