@@ -15,7 +15,7 @@ from blender import load_blender
 
 
 def show_3d(data_root: str, data_name: str):
-    img, pose, render_pose, hwf, i_split = load_blender(
+    img, pose, hwf, i_split = load_blender(
         data_root, data_name, False)
     i_train, i_val, i_test = i_split
 
@@ -52,7 +52,7 @@ def show_3d(data_root: str, data_name: str):
     # fig, axs = plt.subplots(ncols=1, figsize=(10,10), subplot_kw={"projection":"3d"})
 
     plt.title('Data 3D Visualize')
-    plt.savefig('dataset/test/axis_z-1.png')
+    plt.savefig('dataset/coordinates/axis_z-1.png')
     plt.show()
 
     return 0

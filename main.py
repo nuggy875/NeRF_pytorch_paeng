@@ -32,7 +32,7 @@ def main(cfg: DictConfig):
 
     # == 1. LOAD DATASET (blender) ==
     if cfg.data.type == 'blender':
-        images, poses, render_poses, hwk, i_split = load_blender(
+        images, poses, hwk, i_split = load_blender(
             cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
         i_train, i_val, i_test = i_split
         img_h, img_w, img_k = hwk
@@ -132,7 +132,6 @@ def main(cfg: DictConfig):
                    fn_posenc=fn_posenc,
                    fn_posenc_d=fn_posenc_d,
                    model=model,
-                   render_poses=render_poses,
                    hwk=hwk,
                    cfg=cfg)
 

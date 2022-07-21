@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm, trange
 import imageio
 
-from dataset import load_blender
+from dataset import load_blender, get_render_pose
 from model import NeRF, get_positional_encoder
 from process import run_model_batchify, get_rays, preprocess_rays
 from utils import img2mse, mse2psnr, to8b
@@ -75,7 +75,15 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
     f.close()
 
 
-def render(idx, fn_posenc, fn_posenc_d, model, render_poses, hwk, cfg):
+def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
+    '''
+    default ) n_angle : 40 / single_angle = -1
+    if single_angle is not -1 , it would result single rendering image.
+    '''
+    n_angle = 200
+    single_angle = -1
+    render_poses = get_render_pose(n_angle=n_angle, single_angle=single_angle)
+
     model.eval()
     checkpoint = torch.load(os.path.join(
         LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
@@ -91,6 +99,7 @@ def render(idx, fn_posenc, fn_posenc_d, model, render_poses, hwk, cfg):
     disps = []
     with torch.no_grad():
         for i, test_pose in enumerate(tqdm(render_poses)):
+            print('RENDERING... idx: {}'.format(i))
             rays_o, rays_d = get_rays(
                 img_w, img_h, img_k, test_pose[:3][:4])  # [1]
             rays = preprocess_rays(rays_o, rays_d, cfg)  # [3]
@@ -106,18 +115,23 @@ def render(idx, fn_posenc, fn_posenc_d, model, render_poses, hwk, cfg):
             disp_np = disp.cpu().numpy()
             rgbs.append(rgb_np)
             disps.append(disp_np)
+            savefilename = os.path.join(
+                save_render_dir, '{:03d}.png'.format(i))
+            imageio.imwrite(savefilename, to8b(rgb_np))
 
         rgbs = np.stack(rgbs, 0)
         disps = np.stack(disps, 0)
-    imageio.mimwrite(os.path.join(save_render_dir, "rgb.mp4"),
-                     to8b(rgbs), fps=30, quality=8)
-    imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
-                     to8b(disps / np.max(disps)), fps=30, quality=8)
+
+    if single_angle == -1:
+        imageio.mimwrite(os.path.join(save_render_dir, "rgb.mp4"),
+                         to8b(rgbs), fps=30, quality=8)
+        imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
+                         to8b(disps / np.max(disps)), fps=30, quality=8)
 
 
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
 def main(cfg: DictConfig):
-    images, poses, render_poses, hwk, i_split = load_blender(
+    images, poses, hwk, i_split = load_blender(
         cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
     i_train, i_val, i_test = i_split
     img_h, img_w, img_k = hwk
@@ -136,11 +150,10 @@ def main(cfg: DictConfig):
     #      hwk=hwk,
     #      cfg=cfg)
 
-    render(idx=100000,
+    render(idx=200000,
            fn_posenc=fn_posenc,
            fn_posenc_d=fn_posenc_d,
            model=model,
-           render_poses=render_poses,
            hwk=hwk,
            cfg=cfg)
 
