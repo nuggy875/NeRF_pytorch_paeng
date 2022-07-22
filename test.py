@@ -144,21 +144,21 @@ def main(cfg: DictConfig):
     skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
-    # test(idx=100000,
-    #      fn_posenc=fn_posenc,
-    #      fn_posenc_d=fn_posenc_d,
-    #      model=model,
-    #      test_imgs=torch.Tensor(images[i_test]).to(device),
-    #      test_poses=torch.Tensor(poses[i_test]).to(device),
-    #      hwk=hwk,
-    #      cfg=cfg)
+    test(idx=200000,
+         fn_posenc=fn_posenc,
+         fn_posenc_d=fn_posenc_d,
+         model=model,
+         test_imgs=torch.Tensor(images[i_test]).to(device),
+         test_poses=torch.Tensor(poses[i_test]).to(device),
+         hwk=hwk,
+         cfg=cfg)
 
-    render(idx=200000,
-           fn_posenc=fn_posenc,
-           fn_posenc_d=fn_posenc_d,
-           model=model,
-           hwk=hwk,
-           cfg=cfg)
+    # render(idx=200000,
+    #        fn_posenc=fn_posenc,
+    #        fn_posenc_d=fn_posenc_d,
+    #        model=model,
+    #        hwk=hwk,
+    #        cfg=cfg)
 
 
 if __name__ == '__main__':
