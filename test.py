@@ -80,7 +80,7 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
     default ) n_angle : 40 / single_angle = -1
     if single_angle is not -1 , it would result single rendering image.
     '''
-    n_angle = 200
+    n_angle = 40
     single_angle = -1
     render_poses = get_render_pose(n_angle=n_angle, single_angle=single_angle)
 
@@ -111,13 +111,16 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
             # save test image
             rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
             disp = torch.reshape(pred_disp, [img_h, img_w])
+            acc = torch.reshape(pred_acc, [img_h, img_w])
+            depth = torch.reshape(predextras['depth_map'], [img_h, img_w])
             rgb_np = rgb.cpu().numpy()
             disp_np = disp.cpu().numpy()
             rgbs.append(rgb_np)
             disps.append(disp_np)
-            savefilename = os.path.join(
-                save_render_dir, '{:03d}.png'.format(i))
-            imageio.imwrite(savefilename, to8b(rgb_np))
+            if not single_angle == -1:
+                savefilename = os.path.join(
+                    save_render_dir, '{:03d}.png'.format(i))
+                imageio.imwrite(savefilename, to8b(rgb_np))
 
         rgbs = np.stack(rgbs, 0)
         disps = np.stack(disps, 0)

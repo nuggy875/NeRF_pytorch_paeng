@@ -103,7 +103,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     rgb_map, disp_map, acc_map, weights, depth_map = volumne_rendering(
         outputs, z_vals, rays_d)
     ret = {'rgb_map': rgb_map, 'disp_map': disp_map,
-           'acc_map': acc_map, 'raw': outputs}
+           'acc_map': acc_map, 'raw': outputs, 'weights': weights, 'depth_map': depth_map}
     return ret
 
 
@@ -123,15 +123,16 @@ def volumne_rendering(outputs, z_vals, rays_d):
     alpha = raw2alpha(outputs[..., 3], dists)  # [N_rays, N_samples]
 
     # Density(alpha) X Transmittance
-    weights = alpha * \
-        torch.cumprod(
-            torch.cat([torch.ones((alpha.shape[0], 1)), 1.-alpha + 1e-10], -1), -1)[:, :-1]
-    rgb_map = torch.sum(weights[..., None] * rgb_sigmoid, -2)  # [N_rays, 3]
+    transmittance = torch.cumprod(
+        torch.cat([torch.ones((alpha.shape[0], 1)), 1.-alpha + 1e-10], -1), -1)[:, :-1]
+    weights = alpha * transmittance
+
+    rgb_map = torch.sum(weights.unsqueeze(-1) * rgb_sigmoid, -2)  # [N_rays, 3]
     depth_map = torch.sum(weights * z_vals, -1)
     disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map),
                             depth_map / torch.sum(weights, -1))
     acc_map = torch.sum(weights, -1)
-    rgb_map = rgb_map + (1.-acc_map[..., None])
+    rgb_map = rgb_map + (1.-acc_map.unsqueeze(-1))          # alpha to real color
     return rgb_map, disp_map, acc_map, weights, depth_map
 
 
