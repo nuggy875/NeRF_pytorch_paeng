@@ -93,7 +93,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1)
     # > Network
     # batchify
-    chunk = cfg.render.chunk_ray
+    chunk = cfg.render.chunk_pts
     outputs_flat = torch.cat([model(embedded[i:i+chunk])
                              for i in range(0, embedded.shape[0], chunk)], 0)
     # outputs_flat = model(embedded)  # [65536, 4] [color(3) + density(1)]
@@ -132,7 +132,8 @@ def volumne_rendering(outputs, z_vals, rays_d):
     disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map),
                             depth_map / torch.sum(weights, -1))
     acc_map = torch.sum(weights, -1)
-    rgb_map = rgb_map + (1.-acc_map.unsqueeze(-1))          # alpha to real color
+    # alpha to real color
+    rgb_map = rgb_map + (1.-acc_map.unsqueeze(-1))
     return rgb_map, disp_map, acc_map, weights, depth_map
 
 

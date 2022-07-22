@@ -33,4 +33,4 @@ render:
   n_fine_pts_per_ray: 128
 
   chunk_ray: 4096
-  chunk_pts: 65536
+  chunk_pts: 4096
