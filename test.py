@@ -16,6 +16,7 @@ from configs.config import CONFIG_DIR, LOG_DIR, device
 
 
 def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
+    print('Start Testing for idx'.format(idx))
     model.eval()
     checkpoint = torch.load(os.path.join(
         LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
@@ -80,6 +81,8 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
     default ) n_angle : 40 / single_angle = -1
     if single_angle is not -1 , it would result single rendering image.
     '''
+    print('Start Rendering for idx'.format(idx))
+
     n_angle = 40
     single_angle = -1
     render_poses = get_render_pose(n_angle=n_angle, single_angle=single_angle)
@@ -144,21 +147,21 @@ def main(cfg: DictConfig):
     skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
-    test(idx=200000,
-         fn_posenc=fn_posenc,
-         fn_posenc_d=fn_posenc_d,
-         model=model,
-         test_imgs=torch.Tensor(images[i_test]).to(device),
-         test_poses=torch.Tensor(poses[i_test]).to(device),
-         hwk=hwk,
-         cfg=cfg)
+    # test(idx='best',
+    #      fn_posenc=fn_posenc,
+    #      fn_posenc_d=fn_posenc_d,
+    #      model=model,
+    #      test_imgs=torch.Tensor(images[i_test]).to(device),
+    #      test_poses=torch.Tensor(poses[i_test]).to(device),
+    #      hwk=hwk,
+    #      cfg=cfg)
 
-    # render(idx=200000,
-    #        fn_posenc=fn_posenc,
-    #        fn_posenc_d=fn_posenc_d,
-    #        model=model,
-    #        hwk=hwk,
-    #        cfg=cfg)
+    render(idx='best',
+           fn_posenc=fn_posenc,
+           fn_posenc_d=fn_posenc_d,
+           model=model,
+           hwk=hwk,
+           cfg=cfg)
 
 
 if __name__ == '__main__':

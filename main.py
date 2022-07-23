@@ -53,15 +53,22 @@ def main(cfg: DictConfig):
     optimizer = torch.optim.Adam(
         params=grad_vars, lr=cfg.training.lr, betas=(0.9, 0.999))
 
+    if cfg.training.start_iter != 0:
+        checkpoint = torch.load(os.path.join(
+            LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(cfg.training.start_iter)))
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print('\nLoaded checkpoint from iter:{}',
+              format(int(cfg.training.start_iter)))
+
     # ====  T R A I N I N G  ====
     print('TRAIN views are', i_train)
     print('TEST views are', i_test)
     print('VAL views are', i_val)
 
-    start = 1
     result_best = {'i': 0, 'loss': 0, 'psnr': 0}
 
-    for i in trange(start, cfg.training.N_iters+1):
+    for i in trange(cfg.training.start_iter + 1, cfg.training.N_iters+1):
         # [1] Get Target & Rays         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         i_img = np.random.choice(i_train)
         target_img = images[i_img]
@@ -99,23 +106,26 @@ def main(cfg: DictConfig):
         loss.backward()
         optimizer.step()
 
+        if i % cfg.training.idx_print == 0:
+            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
+
+        checkpoint = {'idx': i,
+                      'model_state_dict': model.state_dict(),
+                      'optimizer_state_dict': optimizer.state_dict()}
+        save_path = os.path.join(LOG_DIR, cfg.training.name)
+        os.makedirs(save_path, exist_ok=True)
+
+        if i % cfg.training.idx_save == 0 and i > 0:
+            torch.save(checkpoint, os.path.join(
+                save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
+
         # == GET Best result for training ==
         if result_best['psnr'] < psnr:
             result_best['i'] = i
             result_best['loss'] = loss
             result_best['psnr'] = psnr
-
-        if i % cfg.training.idx_print == 0:
-            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
-
-        if i % cfg.training.idx_save == 0 and i > 0:
-            checkpoint = {'idx': i,
-                          'model_state_dict': model.state_dict(),
-                          'optimizer_state_dict': optimizer.state_dict()}
-            save_path = os.path.join(LOG_DIR, cfg.training.name)
-            os.makedirs(save_path, exist_ok=True)
             torch.save(checkpoint, os.path.join(
-                save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
+                save_path, cfg.training.name + '_best.pth.tar'))
 
         # ====  T E S T I N G  ====
         if i % cfg.training.idx_test == 0 and i > 0:
@@ -134,6 +144,22 @@ def main(cfg: DictConfig):
                    model=model,
                    hwk=hwk,
                    cfg=cfg)
+
+    # Test for Best result
+    test(idx='best',
+         fn_posenc=fn_posenc,
+         fn_posenc_d=fn_posenc_d,
+         model=model,
+         test_imgs=torch.Tensor(images[i_test]).to(device),
+         test_poses=torch.Tensor(poses[i_test]).to(device),
+         hwk=hwk,
+         cfg=cfg)
+    render(idx='best',
+           fn_posenc=fn_posenc,
+           fn_posenc_d=fn_posenc_d,
+           model=model,
+           hwk=hwk,
+           cfg=cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))
