@@ -25,15 +25,21 @@ synthetic datasets : [chair, drums, ficus, hotdog, lego, materials, mic, ship]
 ---
 ## Training
 
-configs/.yaml 파일에서 chunk 숫자 조정하여 batchify 가능.
+configs/.yaml 파일에서 chunk 숫자 조정하여 batchify 가능. ( cuda memory issue )
 
-( cuda memory issue )
+```
+python train.py
+```
 
-
-Testing : 1 GPU RTX3090
-800x800 / chunk_ray : 4096 / chunk_pts : 65536
 
 ## Testing
+```
+python test.py
+```
+if Test, set configs/.yaml mode_test = TRUE
+
+if Render, set configs/.yaml mode_render = TRUE
+
 SSIM, LPIPS code from https://github.com/dingkeyan93/IQA-optimization
 
 ### Check Analysis Note Link below

@@ -1,11 +1,10 @@
 visualization:
-  visdom: True
+  visdom: False
   visdom_port: "8900"
 
 data:
-  name: "lego"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
-  root_local: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
+  name: "drums"
+  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/drums"
   type: "blender"
   half_res: False
   white_bkgd: True
@@ -24,7 +23,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "lego_0722_1"
+  name: "drums_0725_1"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -35,12 +34,12 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "lego_0722_1"
-  test_iter: 250000
+  name: "drums_0725_1"
+  test_iter: 200000
   mode_test : True
   mode_render : True
   n_angle: 40
   single_angle : -1
   phi: -30.0
-  testskip: 1
+  testskip: 8
   
