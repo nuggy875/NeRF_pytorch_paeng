@@ -4,7 +4,8 @@ visualization:
 
 data:
   name: "lego"
-  root: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
+  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
+  root_local: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
   type: "blender"
   half_res: False
   white_bkgd: True
@@ -30,15 +31,16 @@ training:
   idx_print: 1000
   idx_save: 50000
   idx_test: 50000
-  idx_video: 100000
+  idx_video: 50000
   idx_visdom: 100
 
 testing:
   name: "lego_0722_1"
   test_iter: 200000
+  mode_test : True
+  mode_render : False
   n_angle: 1
   single_angle : 135
   phi: -30.0
-  mode_test : False
-  mode_render : True
+  testskip: 200
   

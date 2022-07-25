@@ -6,11 +6,13 @@ import time
 from omegaconf import DictConfig
 from tqdm import tqdm, trange
 import imageio
+from IQA_pytorch import SSIM, LPIPSvgg, DISTS
+import lpips
 
 from dataset import load_blender, get_render_pose
 from model import NeRF, get_positional_encoder
 from process import run_model_batchify, get_rays, preprocess_rays
-from utils import img2mse, mse2psnr, to8b
+from utils import img2mse, mse2psnr, to8b, saveNumpyImage
 
 from configs.config import CONFIG_DIR, LOG_DIR, device
 
@@ -29,8 +31,10 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
     img_h, img_w, img_k = hwk
 
     losses = []
-    psnrs = []
-    result_best = {'i': 0, 'loss': 0, 'psnr': 0}
+    perform_PSNR = []
+    perform_SSIM = []
+    perform_LPIPS = []
+    result_best = {'i': 0, 'loss': 0, 'psnr': 0, 'ssim': 0, 'lpips': 0}
     with torch.no_grad():
         for i, test_pose in enumerate(tqdm(test_poses)):
             rays_o, rays_d = get_rays(
@@ -53,25 +57,39 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
 
             # GET loss & psnr
             target_img_flat = torch.reshape(test_imgs[i], [-1, 3])
+            # >> GET PSNR
             img_loss = img2mse(pred_rgb, target_img_flat)
             loss = img_loss
             psnr = mse2psnr(img_loss)
+
+            # GET SSIM & LPIPS
+            SSIM_ = SSIM(channels=3)
+            loss_ssim = SSIM_(rgb.permute(2, 0, 1).unsqueeze(0), test_imgs[i].permute(2, 0, 1).unsqueeze(0), as_loss=False)
+            # LLPIS_ = LPIPSvgg(channels=3)
+            # loss_lpips = LLPIS_(rgb.permute(2, 0, 1).unsqueeze(0), test_imgs[i].permute(2, 0, 1).unsqueeze(0))
+            LPIPS_ = lpips.LPIPS(net='vgg')
+            loss_lpips = LPIPS_(rgb.permute(2, 0, 1), test_imgs[i].permute(2, 0, 1))
+
             losses.append(img_loss)
-            psnrs.append(psnr)
-            print('idx : {} | Loss : {} | PSNR : {}'.format(i, img_loss, psnr))
+            perform_PSNR.append(psnr)
+            perform_SSIM.append(loss_ssim)
+            perform_LPIPS.append(loss_lpips)
+            print('idx:{} | Loss:{} | PSNR:{} | SSIM:{} | LPIPS:{}'.format(i, img_loss, psnr, loss_ssim, loss_lpips))
 
             # save best result
             if result_best['psnr'] < psnr:
                 result_best['i'] = i
                 result_best['loss'] = loss
                 result_best['psnr'] = psnr
+                result_best['ssim'] = psnr
+                result_best['lpips'] = psnr
 
     print('BEST Result for Testing) idx : {} , LOSS : {} , PSNR : {}'.format(
-        result_best['i'], result_best['loss'], result_best['psnr']))
+        result_best['i'], result_best['loss'], result_best['psnr'],result_best['ssim'],result_best['lpips']))
 
     f = open(os.path.join(save_test_dir, "_result.txt"), 'w')
     for i in range(len(losses)):
-        line = 'idx:{}\tloss:{}\tpsnr:{}\n'.format(i, losses[i], psnrs[i])
+        line = 'idx:{}\tloss:{}\tpsnr:{}\tssim:{}\tlpips:{}\n'.format(i, losses[i], perform_PSNR[i], perform_SSIM[i], perform_LPIPS[i])
         f.write(line)
     f.close()
 
@@ -147,7 +165,7 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
 def main(cfg: DictConfig):
     images, poses, hwk, i_split = load_blender(
-        cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
+        cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd, testskip=cfg.testing.testskip)
     i_train, i_val, i_test = i_split
     img_h, img_w, img_k = hwk
     fn_posenc, input_ch = get_positional_encoder(L=10)
