@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from tkinter import Y
 import numpy as np
 import torch
 import hydra
@@ -15,18 +16,16 @@ from process import run_model_batchify, get_rays, preprocess_rays
 from utils import img2mse, mse2psnr, saveNumpyImage
 from test import test, render
 
-from configs.config import CONFIG_DIR, LOG_DIR, device
+from configs.config import CONFIG_DIR, LOG_DIR, device, DATA_NAME
 
 np.random.seed(0)
 
 
-@hydra.main(config_path=CONFIG_DIR, config_name="lego")
+@hydra.main(config_path=CONFIG_DIR, config_name=DATA_NAME)
 def main(cfg: DictConfig):
-    # opts = parse(sys.argv[1:])
-
     # == visdom ==
     if cfg.visualization.visdom:
-        vis = visdom.Visom(port=cfg.visualization.visdom_port)
+        vis = visdom.Visdom(port=cfg.visualization.visdom_port)
     else:
         vis = None
 
@@ -106,14 +105,25 @@ def main(cfg: DictConfig):
         loss.backward()
         optimizer.step()
 
-        if i % cfg.training.idx_print == 0:
-            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
-
         checkpoint = {'idx': i,
                       'model_state_dict': model.state_dict(),
                       'optimizer_state_dict': optimizer.state_dict()}
         save_path = os.path.join(LOG_DIR, cfg.training.name)
         os.makedirs(save_path, exist_ok=True)
+
+        # ====  Print LOG  ====
+        if i % cfg.training.idx_print == 0:
+            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
+        
+        if i % cfg.training.idx_visdom == 0 and vis is not None:
+            vis.line(X=torch.ones((1, 2)).cpu() * i,
+                    Y=torch.Tensor([loss, psnr]).unsqueeze(0).cpu(),
+                    win='loss_psnr',
+                    update='append',
+                    opts=dict(xlabel='iteration',
+                            ylabel='loss_psnr',
+                            title='TRAIN LOSS&PSNR for dataset {}'.format(DATA_NAME),
+                            legend=['LOSS', 'PSNR']))
 
         # ====  Save .pth file  ====
         if i % cfg.training.idx_save == 0 and i > 0:
