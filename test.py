@@ -12,7 +12,7 @@ import lpips
 from dataset import load_blender, get_render_pose
 from model import NeRF, get_positional_encoder
 from process import run_model_batchify, get_rays, preprocess_rays
-from utils import img2mse, mse2psnr, to8b, saveNumpyImage
+from utils import getSSIM, getLPIPS, img2mse, mse2psnr, to8b, saveNumpyImage
 
 from configs.config import CONFIG_DIR, LOG_DIR, device
 
@@ -63,12 +63,8 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
             psnr = mse2psnr(img_loss)
 
             # GET SSIM & LPIPS
-            SSIM_ = SSIM(channels=3)
-            loss_ssim = SSIM_(rgb.permute(2, 0, 1).unsqueeze(0), test_imgs[i].permute(2, 0, 1).unsqueeze(0), as_loss=False)
-            # LLPIS_ = LPIPSvgg(channels=3)
-            # loss_lpips = LLPIS_(rgb.permute(2, 0, 1).unsqueeze(0), test_imgs[i].permute(2, 0, 1).unsqueeze(0))
-            LPIPS_ = lpips.LPIPS(net='vgg')
-            loss_lpips = LPIPS_(rgb.permute(2, 0, 1), test_imgs[i].permute(2, 0, 1))
+            loss_ssim=getSSIM(pred=rgb, gt=test_imgs[i])
+            loss_lpips=getLPIPS(pred=rgb, gt=test_imgs[i])
 
             losses.append(img_loss)
             perform_PSNR.append(psnr)
