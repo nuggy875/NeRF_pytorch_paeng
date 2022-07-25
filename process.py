@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
+from utils import put_epsilon
 
 
 def get_rays(W, H, K, c2w):
@@ -129,24 +130,9 @@ def volumne_rendering(outputs, z_vals, rays_d):
 
     rgb_map = torch.sum(weights.unsqueeze(-1) * rgb_sigmoid, -2)  # [N_rays, 3]
     depth_map = torch.sum(weights * z_vals, -1)
-    disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map),
-                            depth_map / torch.sum(weights, -1))
+    disp_map = 1./put_epsilon(depth_map / put_epsilon(torch.sum(weights, -1)))
     acc_map = torch.sum(weights, -1)
     # alpha to real color
     rgb_map = rgb_map + (1.-acc_map.unsqueeze(-1))
     return rgb_map, disp_map, acc_map, weights, depth_map
 
-
-def test():
-    near = 2. * torch.ones_like(torch.rand(1024, 1))
-    far = 6. * torch.ones_like(torch.rand(1024, 1))
-    t_vals = torch.linspace(0., 1., steps=64)
-    z_vals = near * (1.-t_vals) + far * (t_vals)
-    near_val = near * (1.-t_vals)
-    far_val = far * (t_vals)
-    plt.plot(z_vals[0])
-    plt.savefig('dataset/test2/z_vals.png')
-
-
-if __name__ == "__main__":
-    test()

@@ -34,12 +34,12 @@ def pose_spherical(theta, phi, radius):
     return c2w
 
 
-def get_render_pose(n_angle=1, single_angle=-1):
+def get_render_pose(n_angle=1, single_angle=-1, phi=-30.0):
     if not n_angle == 1 and single_angle == -1:
-        render_poses = torch.stack([pose_spherical(angle, -30.0, 4.0)
+        render_poses = torch.stack([pose_spherical(angle, phi, 4.0)
                                     for angle in np.linspace(-180, 180, n_angle+1)[:-1]], 0)
     else:
-        render_poses = pose_spherical(single_angle, -30.0, 4.0).unsqueeze(0)
+        render_poses = pose_spherical(single_angle, phi, 4.0).unsqueeze(0)
     return render_poses
 
 

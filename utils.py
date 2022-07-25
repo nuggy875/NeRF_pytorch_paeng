@@ -18,3 +18,6 @@ def saveNumpyImage(img):
     img = np.array(img) * 255
     im = Image.fromarray(img.astype(np.uint8))
     im.save(LOG_DIR+'/white_bkgd_false.jpg')
+
+
+def put_epsilon(map): return torch.max(1e-10 * torch.ones_like(map), map)

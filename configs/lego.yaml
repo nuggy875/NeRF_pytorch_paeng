@@ -9,8 +9,21 @@ data:
   half_res: False
   white_bkgd: True
 
+model:
+  netDepth: 8
+  netWidth: 256
+
+render:
+  depth_near: 2.
+  depth_far: 6.
+  n_rays_per_image: 1024
+  n_coarse_pts_per_ray: 512
+  n_fine_pts_per_ray: 128
+  chunk_ray: 4096
+  chunk_pts: 65536
+
 training:
-  name: "lego_0723_1"
+  name: "lego_0722_1"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -19,18 +32,13 @@ training:
   idx_test: 50000
   idx_video: 100000
   idx_visdom: 100
+
+testing:
+  name: "lego_0722_1"
+  test_iter: 200000
+  n_angle: 1
+  single_angle : 135
+  phi: -30.0
+  mode_test : False
+  mode_render : True
   
-model:
-  netDepth: 8
-  netWidth: 256
-
-render:
-  depth_near: 2.
-  depth_far: 6.
-
-  n_rays_per_image: 1024
-  n_coarse_pts_per_ray: 512
-  n_fine_pts_per_ray: 128
-
-  chunk_ray: 4096
-  chunk_pts: 65536

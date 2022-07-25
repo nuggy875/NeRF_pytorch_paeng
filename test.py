@@ -19,11 +19,11 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg):
     print('Start Testing for idx'.format(idx))
     model.eval()
     checkpoint = torch.load(os.path.join(
-        LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
+        LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
 
     save_test_dir = os.path.join(
-        LOG_DIR, cfg.training.name, cfg.training.name+'_{}'.format(idx), 'test_result')
+        LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}'.format(idx), 'test_result')
     os.makedirs(save_test_dir, exist_ok=True)
 
     img_h, img_w, img_k = hwk
@@ -83,23 +83,25 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
     '''
     print('Start Rendering for idx'.format(idx))
 
-    n_angle = 40
-    single_angle = -1
-    render_poses = get_render_pose(n_angle=n_angle, single_angle=single_angle)
+    n_angle = cfg.testing.n_angle
+    single_angle = cfg.testing.single_angle
+    render_poses = get_render_pose(n_angle=n_angle, single_angle=single_angle, phi=cfg.testing.phi)
 
     model.eval()
     checkpoint = torch.load(os.path.join(
-        LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(idx)))
+        LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
 
     save_render_dir = os.path.join(
-        LOG_DIR, cfg.training.name, cfg.training.name+'_{}'.format(idx), 'render_result')
+        LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}'.format(idx), 'render_result')
     os.makedirs(save_render_dir, exist_ok=True)
 
     img_h, img_w, img_k = hwk
 
     rgbs = []
     disps = []
+    depths = []
+    accs = []
     with torch.no_grad():
         for i, test_pose in enumerate(tqdm(render_poses)):
             print('RENDERING... idx: {}'.format(i))
@@ -118,12 +120,17 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
             depth = torch.reshape(predextras['depth_map'], [img_h, img_w])
             rgb_np = rgb.cpu().numpy()
             disp_np = disp.cpu().numpy()
+            depth_np = depth.cpu().numpy()
+            acc_np = acc.cpu().numpy()
             rgbs.append(rgb_np)
             disps.append(disp_np)
+            depths.append(depth_np)
+            accs.append(acc_np)
             if not single_angle == -1:
-                savefilename = os.path.join(
-                    save_render_dir, '{:03d}.png'.format(i))
-                imageio.imwrite(savefilename, to8b(rgb_np))
+                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_rgb.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(rgb_np))
+                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_depth.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(depth_np))
+                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_disp.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(disp_np / np.max(disp_np)))
+                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_acc.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(acc_np))
 
         rgbs = np.stack(rgbs, 0)
         disps = np.stack(disps, 0)
@@ -133,6 +140,8 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg):
                          to8b(rgbs), fps=30, quality=8)
         imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
                          to8b(disps / np.max(disps)), fps=30, quality=8)
+        imageio.mimwrite(os.path.join(save_render_dir, "depth.mp4"),
+                    to8b(depths), fps=30, quality=8)
 
 
 @hydra.main(config_path=CONFIG_DIR, config_name="lego")
@@ -147,21 +156,23 @@ def main(cfg: DictConfig):
     skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
-    # test(idx='best',
-    #      fn_posenc=fn_posenc,
-    #      fn_posenc_d=fn_posenc_d,
-    #      model=model,
-    #      test_imgs=torch.Tensor(images[i_test]).to(device),
-    #      test_poses=torch.Tensor(poses[i_test]).to(device),
-    #      hwk=hwk,
-    #      cfg=cfg)
 
-    render(idx='best',
-           fn_posenc=fn_posenc,
-           fn_posenc_d=fn_posenc_d,
-           model=model,
-           hwk=hwk,
-           cfg=cfg)
+    if cfg.testing.mode_test:
+        test(idx=cfg.testing.test_iter,
+            fn_posenc=fn_posenc,
+            fn_posenc_d=fn_posenc_d,
+            model=model,
+            test_imgs=torch.Tensor(images[i_test]).to(device),
+            test_poses=torch.Tensor(poses[i_test]).to(device),
+            hwk=hwk,
+            cfg=cfg)
+    if cfg.testing.mode_render:
+        render(idx=cfg.testing.test_iter,
+            fn_posenc=fn_posenc,
+            fn_posenc_d=fn_posenc_d,
+            model=model,
+            hwk=hwk,
+            cfg=cfg)
 
 
 if __name__ == '__main__':

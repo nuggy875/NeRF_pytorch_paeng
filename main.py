@@ -53,13 +53,13 @@ def main(cfg: DictConfig):
     optimizer = torch.optim.Adam(
         params=grad_vars, lr=cfg.training.lr, betas=(0.9, 0.999))
 
+    # == 5. RESUME ==
     if cfg.training.start_iter != 0:
         checkpoint = torch.load(os.path.join(
             LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(cfg.training.start_iter)))
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        print('\nLoaded checkpoint from iter:{}',
-              format(int(cfg.training.start_iter)))
+        print('\nLoaded checkpoint from iter:{}'.format(int(cfg.training.start_iter)))
 
     # ====  T R A I N I N G  ====
     print('TRAIN views are', i_train)
@@ -93,7 +93,7 @@ def main(cfg: DictConfig):
                                   selected_coords[:, 1]]
         # [3] Preprocess Rays   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         rays = preprocess_rays(rays_o, rays_d, cfg)
-        # [4] Run Model ==
+        # [4] Run Model         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
                                                          fn_posenc=fn_posenc,
                                                          fn_posenc_d=fn_posenc_d,
@@ -115,6 +115,7 @@ def main(cfg: DictConfig):
         save_path = os.path.join(LOG_DIR, cfg.training.name)
         os.makedirs(save_path, exist_ok=True)
 
+        # ====  Save .pth file  ====
         if i % cfg.training.idx_save == 0 and i > 0:
             torch.save(checkpoint, os.path.join(
                 save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
@@ -137,6 +138,7 @@ def main(cfg: DictConfig):
                  test_poses=torch.Tensor(poses[i_test]).to(device),
                  hwk=hwk,
                  cfg=cfg)
+        # ====  R E N D E R I N G  ====
         if i % cfg.training.idx_video == 0 and i > 0:
             render(idx=i,
                    fn_posenc=fn_posenc,
@@ -145,7 +147,7 @@ def main(cfg: DictConfig):
                    hwk=hwk,
                    cfg=cfg)
 
-    # Test for Best result
+    # Test & Render for Best result
     test(idx='best',
          fn_posenc=fn_posenc,
          fn_posenc_d=fn_posenc_d,
@@ -154,6 +156,7 @@ def main(cfg: DictConfig):
          test_poses=torch.Tensor(poses[i_test]).to(device),
          hwk=hwk,
          cfg=cfg)
+
     render(idx='best',
            fn_posenc=fn_posenc,
            fn_posenc_d=fn_posenc_d,
