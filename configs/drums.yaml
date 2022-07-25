@@ -1,5 +1,5 @@
 visualization:
-  visdom: False
+  visdom: True
   visdom_port: "8900"
 
 data:

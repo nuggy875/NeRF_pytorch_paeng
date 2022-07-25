@@ -24,7 +24,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "lego_0722_1"
+  name: "lego_0725_1"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -35,7 +35,7 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "lego_0722_1"
+  name: "lego_0725_1"
   test_iter: 250000
   mode_test : True
   mode_render : True

@@ -118,7 +118,7 @@ def main(cfg: DictConfig):
         if i % cfg.training.idx_visdom == 0 and vis is not None:
             vis.line(X=torch.ones((1, 2)).cpu() * i,
                     Y=torch.Tensor([loss, psnr]).unsqueeze(0).cpu(),
-                    win='loss_psnr',
+                    win='loss_psnr_{}'.format(cfg.training.name),
                     update='append',
                     opts=dict(xlabel='iteration',
                             ylabel='loss_psnr',

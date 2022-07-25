@@ -52,7 +52,7 @@ def show_3d(data_root: str, data_name: str):
     # fig, axs = plt.subplots(ncols=1, figsize=(10,10), subplot_kw={"projection":"3d"})
 
     plt.title('Data 3D Visualize')
-    plt.savefig('dataset/coordinates/axis_z-1.png')
+    plt.savefig('./data_dist/axis_z-1.png')
     plt.show()
 
     return 0
@@ -63,4 +63,5 @@ if __name__ == "__main__":
     # anim = animation.FuncAnimation(fig, animate, init_func=init, frames=360, interval=20, blit=True)
     # anim.save('dataset/anim_test.gif')
 
-    show_3d("/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender")
+    # show_3d("/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender")
+    show_3d("/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/drums", "blender")
