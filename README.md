@@ -22,6 +22,8 @@ https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1
 
 synthetic datasets : [chair, drums, ficus, hotdog, lego, materials, mic, ship]
 
+custom datasets : [minions, ]
+
 ---
 ## Training
 
