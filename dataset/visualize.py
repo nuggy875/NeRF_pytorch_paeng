@@ -11,13 +11,14 @@ import cv2
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 from matplotlib import animation
-from blender import load_blender
+from blender import load_blender, load_custom
 
 
 def show_3d(data_root: str, data_name: str):
-    img, pose, hwf, i_split = load_blender(
-        data_root, data_name, False)
-    i_train, i_val, i_test = i_split
+    # img, pose, hwf, i_split = load_blender(
+    #     data_root, data_name, False)
+    img, pose, hwf, i_split = load_custom(
+        data_root, data_name, False, bkg_white=False)
 
     test_img = img[0]
     test_pose = pose[0]
@@ -64,4 +65,4 @@ if __name__ == "__main__":
     # anim.save('dataset/anim_test.gif')
 
     # show_3d("/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender")
-    show_3d("/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/drums", "blender")
+    show_3d("/home/brozserver2/brozdisk/data/nerf/custom/minions", "custom")

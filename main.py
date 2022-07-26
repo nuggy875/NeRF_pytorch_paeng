@@ -10,7 +10,7 @@ import visdom
 from PIL import Image
 from tqdm import tqdm, trange
 
-from dataset import load_blender
+from dataset import load_blender, load_custom
 from model import NeRF, get_positional_encoder
 from process import run_model_batchify, get_rays, preprocess_rays
 from utils import img2mse, mse2psnr, saveNumpyImage
@@ -34,6 +34,13 @@ def main(cfg: DictConfig):
         images, poses, hwk, i_split = load_blender(
             cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
         i_train, i_val, i_test = i_split
+        img_h, img_w, img_k = hwk
+    elif cfg.data.type == 'custom':
+        images, poses, hwk, i_split = load_custom(
+            cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
+        i_train = i_split[0]
+        i_val = []
+        i_test = []
         img_h, img_w, img_k = hwk
 
     # == 2. POSITIONAL ENCODING - Define Function ==
@@ -139,7 +146,7 @@ def main(cfg: DictConfig):
                 save_path, cfg.training.name + '_best.pth.tar'))
 
         # ====  T E S T I N G  ====
-        if i % cfg.training.idx_test == 0 and i > 0:
+        if i % cfg.training.idx_test == 0 and i > 0 and cfg.testing.mode_test:
             test(idx=i,
                  fn_posenc=fn_posenc,
                  fn_posenc_d=fn_posenc_d,
@@ -149,7 +156,7 @@ def main(cfg: DictConfig):
                  hwk=hwk,
                  cfg=cfg)
         # ====  R E N D E R I N G  ====
-        if i % cfg.training.idx_video == 0 and i > 0:
+        if i % cfg.training.idx_video == 0 and i > 0 and cfg.testing.mode_render:
             render(idx=i,
                    fn_posenc=fn_posenc,
                    fn_posenc_d=fn_posenc_d,
@@ -158,21 +165,23 @@ def main(cfg: DictConfig):
                    cfg=cfg)
 
     # Test & Render for Best result
-    test(idx='best',
-         fn_posenc=fn_posenc,
-         fn_posenc_d=fn_posenc_d,
-         model=model,
-         test_imgs=torch.Tensor(images[i_test]).to(device),
-         test_poses=torch.Tensor(poses[i_test]).to(device),
-         hwk=hwk,
-         cfg=cfg)
+    if cfg.testing.mode_test:
+        test(idx='best',
+            fn_posenc=fn_posenc,
+            fn_posenc_d=fn_posenc_d,
+            model=model,
+            test_imgs=torch.Tensor(images[i_test]).to(device),
+            test_poses=torch.Tensor(poses[i_test]).to(device),
+            hwk=hwk,
+            cfg=cfg)
 
-    render(idx='best',
-           fn_posenc=fn_posenc,
-           fn_posenc_d=fn_posenc_d,
-           model=model,
-           hwk=hwk,
-           cfg=cfg)
+    if cfg.testing.mode_render:
+        render(idx='best',
+            fn_posenc=fn_posenc,
+            fn_posenc_d=fn_posenc_d,
+            model=model,
+            hwk=hwk,
+            cfg=cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))

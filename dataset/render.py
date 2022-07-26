@@ -44,5 +44,5 @@ def get_render_pose(n_angle=1, single_angle=-1, phi=-30.0):
 
 
 if __name__ == "__main__":
-    render_poses = get_render_pose(n_angle=200, single_angle=-1)
+    render_poses = get_render_pose(n_angle=1, single_angle=120, phi=-30)
     print(render_poses.shape)

@@ -144,9 +144,9 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg, n_angle=40, single_angl
             accs.append(acc_np)
             if not single_angle == -1:
                 imageio.imwrite(os.path.join(save_render_dir, '{}_{}_rgb.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(rgb_np))
-                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_depth.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(depth_np))
-                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_disp.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(disp_np / np.max(disp_np)))
-                imageio.imwrite(os.path.join(save_render_dir, '{}_{}_acc.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(acc_np))
+                # imageio.imwrite(os.path.join(save_render_dir, '{}_{}_depth.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(depth_np))
+                # imageio.imwrite(os.path.join(save_render_dir, '{}_{}_disp.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(disp_np / np.max(disp_np)))
+                # imageio.imwrite(os.path.join(save_render_dir, '{}_{}_acc.png'.format(cfg.testing.single_angle,str(cfg.testing.phi))), to8b(acc_np))
 
         rgbs = np.stack(rgbs, 0)
         disps = np.stack(disps, 0)
