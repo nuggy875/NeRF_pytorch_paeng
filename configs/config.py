@@ -12,7 +12,7 @@ LOG_DIR = os.path.join(os.path.abspath(os.path.dirname(
 
 # [chair, drums, ficus, hotdog, lego, materials, mic, ship]
 # FIXME Something wrong with ficus & ship
-DATA_NAME = 'drums'
+DATA_NAME = 'minions'
 
 print('>> CONFIG File PATH : {}'.format(CONFIG_DIR))
 print('>> LOG_DIR File PATH : {}'.format(LOG_DIR))
