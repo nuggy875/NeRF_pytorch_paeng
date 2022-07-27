@@ -3,11 +3,11 @@ visualization:
   visdom_port: "8900"
 
 data:
-  name: "lego"
+  name: "minions"
   root: "/home/brozserver2/brozdisk/data/nerf/custom/minions"
   type: "custom"
-  half_res: False
   white_bkgd: True
+  reduce_res: 4.
 
 model:
   netDepth: 8
@@ -23,22 +23,22 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "minions_0726_1"
+  name: "minions_0727_1"
   start_iter: 0
   N_iters: 300000
   lr: 5e-4
   idx_print: 1000
   idx_save: 50000
   idx_test: 50000
-  idx_video: 100000
+  idx_video: 50000
   idx_visdom: 100
 
 testing:
-  name: "minions_0726_1"
-  test_iter: 300000
+  name: "minions_0727_1"
+  test_iter: 100000
   mode_test : False
   mode_render : True
-  n_angle: 200
+  n_angle: 100
   single_angle : -1
   phi: -30.0
   testskip: 8

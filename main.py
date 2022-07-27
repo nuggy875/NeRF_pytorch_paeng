@@ -32,12 +32,19 @@ def main(cfg: DictConfig):
     # == 1. LOAD DATASET (blender) ==
     if cfg.data.type == 'blender':
         images, poses, hwk, i_split = load_blender(
-            cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
+            data_root=cfg.data.root,
+            data_name=cfg.data.name,
+            bkg_white=cfg.data.white_bkgd,
+            reduce_res=cfg.data.reduce_res)
         i_train, i_val, i_test = i_split
         img_h, img_w, img_k = hwk
+
     elif cfg.data.type == 'custom':
         images, poses, hwk, i_split = load_custom(
-            cfg.data.root, cfg.data.name, cfg.data.half_res, cfg.data.white_bkgd)
+            data_root=cfg.data.root,
+            data_name=cfg.data.name,
+            bkg_white=cfg.data.white_bkgd,
+            reduce_res=cfg.data.reduce_res)
         i_train = i_split[0]
         i_val = []
         i_test = []
@@ -65,7 +72,8 @@ def main(cfg: DictConfig):
             LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(cfg.training.start_iter)))
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        print('\nLoaded checkpoint from iter:{}'.format(int(cfg.training.start_iter)))
+        print('\nLoaded checkpoint from iter:{}'.format(
+            int(cfg.training.start_iter)))
 
     # ====  T R A I N I N G  ====
     print('TRAIN views are', i_train)
@@ -121,16 +129,17 @@ def main(cfg: DictConfig):
         # ====  Print LOG  ====
         if i % cfg.training.idx_print == 0:
             print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
-        
+
         if i % cfg.training.idx_visdom == 0 and vis is not None:
             vis.line(X=torch.ones((1, 2)).cpu() * i,
-                    Y=torch.Tensor([loss, psnr]).unsqueeze(0).cpu(),
-                    win='loss_psnr_{}'.format(cfg.training.name),
-                    update='append',
-                    opts=dict(xlabel='iteration',
-                            ylabel='loss_psnr',
-                            title='TRAIN LOSS&PSNR for dataset {}'.format(DATA_NAME),
-                            legend=['LOSS', 'PSNR']))
+                     Y=torch.Tensor([loss, psnr]).unsqueeze(0).cpu(),
+                     win='loss_psnr_{}'.format(cfg.training.name),
+                     update='append',
+                     opts=dict(xlabel='iteration',
+                               ylabel='loss_psnr',
+                               title='TRAIN LOSS&PSNR for dataset {}'.format(
+                                   DATA_NAME),
+                               legend=['LOSS', 'PSNR']))
 
         # ====  Save .pth file  ====
         if i % cfg.training.idx_save == 0 and i > 0:
@@ -167,21 +176,21 @@ def main(cfg: DictConfig):
     # Test & Render for Best result
     if cfg.testing.mode_test:
         test(idx='best',
-            fn_posenc=fn_posenc,
-            fn_posenc_d=fn_posenc_d,
-            model=model,
-            test_imgs=torch.Tensor(images[i_test]).to(device),
-            test_poses=torch.Tensor(poses[i_test]).to(device),
-            hwk=hwk,
-            cfg=cfg)
+             fn_posenc=fn_posenc,
+             fn_posenc_d=fn_posenc_d,
+             model=model,
+             test_imgs=torch.Tensor(images[i_test]).to(device),
+             test_poses=torch.Tensor(poses[i_test]).to(device),
+             hwk=hwk,
+             cfg=cfg)
 
     if cfg.testing.mode_render:
         render(idx='best',
-            fn_posenc=fn_posenc,
-            fn_posenc_d=fn_posenc_d,
-            model=model,
-            hwk=hwk,
-            cfg=cfg)
+               fn_posenc=fn_posenc,
+               fn_posenc_d=fn_posenc_d,
+               model=model,
+               hwk=hwk,
+               cfg=cfg)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))

@@ -6,8 +6,8 @@ data:
   name: "drums"
   root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/drums"
   type: "blender"
-  half_res: False
   white_bkgd: True
+  reduce_res: 0.
 
 model:
   netDepth: 8

@@ -7,8 +7,8 @@ data:
   root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
   root_local: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
   type: "blender"
-  half_res: False
   white_bkgd: True
+  reduce_res: 0.
 
 model:
   netDepth: 8

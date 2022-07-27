@@ -11,14 +11,14 @@ import cv2
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 from matplotlib import animation
-from blender import load_blender, load_custom
+from load_dataset import load_blender, load_custom
 
 
 def show_3d(data_root: str, data_name: str):
     # img, pose, hwf, i_split = load_blender(
     #     data_root, data_name, False)
     img, pose, hwf, i_split = load_custom(
-        data_root, data_name, False, bkg_white=False)
+        data_root, data_name, False, bkg_white=False, reduce_res=0.)
 
     test_img = img[0]
     test_pose = pose[0]
@@ -53,7 +53,7 @@ def show_3d(data_root: str, data_name: str):
     # fig, axs = plt.subplots(ncols=1, figsize=(10,10), subplot_kw={"projection":"3d"})
 
     plt.title('Data 3D Visualize')
-    plt.savefig('./data_dist/axis_z-1.png')
+    plt.savefig('./test_img/data_dist/axis_z-1.png')
     plt.show()
 
     return 0

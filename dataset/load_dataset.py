@@ -1,19 +1,26 @@
-
-import os
-import sys
-import torch
-import numpy as np
-import imageio
-import json
-import torch.nn.functional as F
-import cv2
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d
 from matplotlib import animation
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+import cv2
+import torch.nn.functional as F
+import json
+import imageio
+import numpy as np
+import torch
+import sys
+import os
+from PIL import Image
+LOG_DIR = os.path.join(os.path.abspath(os.path.dirname(
+    os.path.abspath(os.path.dirname(os.path.realpath(__file__))))), "logs")
 
 
-def load_custom(data_root: str, data_name: str, half_res: bool, autodownload: bool = True, testskip: int = 8, bkg_white: bool = True):
+def saveNumpyImage(img, filename: str):
+    img = np.array(img) * 255
+    im = Image.fromarray(img.astype(np.uint8))
+    im.save(LOG_DIR+'/test/{}.jpg'.format(filename))
+
+
+def load_custom(data_root: str, data_name: str, testskip: int = 8, bkg_white: bool = True, reduce_res=0.):
     print(f"\n\nLoading Dataset {data_name}, from {data_root}")
     splits = ['train']
     metas = {}
@@ -56,17 +63,16 @@ def load_custom(data_root: str, data_name: str, half_res: bool, autodownload: bo
     camera_angle_x = float(metas['train']['camera_angle_x'])
     focal = .5 * W / np.tan(.5 * camera_angle_x)
 
-    half_res = False         # FIXME
-    if half_res:
-        H = H//2
-        W = W//2
-        focal = focal/2.
+    if reduce_res:
+        H = int(H//reduce_res)
+        W = int(W//reduce_res)
+        focal = focal/reduce_res
 
-        imgs_half_res = np.zeros((imgs.shape[0], H, W, 4))
+        imgs_reduced = np.zeros((imgs.shape[0], H, W, imgs.shape[3]))
         for i, img in enumerate(imgs):
-            imgs_half_res[i] = cv2.resize(
+            imgs_reduced[i] = cv2.resize(
                 img, (W, H), interpolation=cv2.INTER_AREA)
-        imgs = imgs_half_res
+        imgs = imgs_reduced
 
     H, W = int(H), int(W)
     K = np.array([
@@ -81,12 +87,10 @@ def load_custom(data_root: str, data_name: str, half_res: bool, autodownload: bo
     else:
         imgs = imgs[..., :3]
 
-    # saveNumpyImage(imgs[0])         # Save Image for testing
-
     return imgs, poses, [H, W, K], i_split
 
 
-def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: bool = True, testskip: int = 8, bkg_white: bool = True):
+def load_blender(data_root: str, data_name: str, testskip: int = 8, bkg_white: bool = True, reduce_res=0.):
     print(f"\n\nLoading Dataset {data_name}, from {data_root}")
     splits = ['train', 'val', 'test']
     metas = {}
@@ -129,17 +133,16 @@ def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: b
     camera_angle_x = float(metas['train']['camera_angle_x'])
     focal = .5 * W / np.tan(.5 * camera_angle_x)
 
-    half_res = False         # FIXME
-    if half_res:
-        H = H//2
-        W = W//2
-        focal = focal/2.
+    if reduce_res:
+        H = int(H//reduce_res)
+        W = int(W//reduce_res)
+        focal = focal/reduce_res
 
-        imgs_half_res = np.zeros((imgs.shape[0], H, W, 4))
+        imgs_reduced = np.zeros((imgs.shape[0], H, W, imgs.shape[3]))
         for i, img in enumerate(imgs):
-            imgs_half_res[i] = cv2.resize(
+            imgs_reduced[i] = cv2.resize(
                 img, (W, H), interpolation=cv2.INTER_AREA)
-        imgs = imgs_half_res
+        imgs = imgs_reduced
 
     H, W = int(H), int(W)
     K = np.array([
@@ -154,15 +157,13 @@ def load_blender(data_root: str, data_name: str, half_res: bool, autodownload: b
     else:
         imgs = imgs[..., :3]
 
-    # saveNumpyImage(imgs[0])         # Save Image for testing
-
     return imgs, poses, [H, W, K], i_split
 
 
 if __name__ == "__main__":
     # i, p, hwf, i = load_blender(
     #     "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender", False)
-    i, p, hwf, i = load_custom(
-        "/home/brozserver2/brozdisk/data/nerf/custom/minions", "custom", False, bkg_white=False)
+    img, p, hwf, i = load_custom(
+        "/home/brozserver2/brozdisk/data/nerf/custom/minions", "custom", False, bkg_white=False, reduce_res=4.)
 
-
+    saveNumpyImage(img[0], "minions_reduced")         # Save Image for testing
