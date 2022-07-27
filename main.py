@@ -137,8 +137,8 @@ def main(cfg: DictConfig):
                      update='append',
                      opts=dict(xlabel='iteration',
                                ylabel='loss_psnr',
-                               title='TRAIN LOSS&PSNR for dataset {}'.format(
-                                   DATA_NAME),
+                               title='LOSS&PSNR for {}'.format(
+                                   cfg.training.name),
                                legend=['LOSS', 'PSNR']))
 
         # ====  Save .pth file  ====
