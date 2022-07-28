@@ -34,6 +34,7 @@ def main(cfg: DictConfig):
         images, poses, hwk, i_split = load_blender(
             data_root=cfg.data.root,
             data_name=cfg.data.name,
+            testskip=cfg.testing.testskip,
             bkg_white=cfg.data.white_bkgd,
             reduce_res=cfg.data.reduce_res)
         i_train, i_val, i_test = i_split
@@ -43,6 +44,7 @@ def main(cfg: DictConfig):
         images, poses, hwk, i_split = load_custom(
             data_root=cfg.data.root,
             data_name=cfg.data.name,
+            testskip=cfg.testing.testskip,
             bkg_white=cfg.data.white_bkgd,
             reduce_res=cfg.data.reduce_res)
         i_train = i_split[0]
