@@ -23,7 +23,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "hotdog_0728_1"
+  name: "hotdog_0728_2"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -34,7 +34,7 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "hotdog_0728_1"
+  name: "hotdog_0728_2"
   test_iter: 200000
   mode_test : False
   mode_render : True
