@@ -13,7 +13,7 @@ from model import NeRF, get_positional_encoder
 from process import run_model_batchify, get_rays, preprocess_rays
 from utils import getSSIM, getLPIPS, img2mse, mse2psnr, to8b, saveNumpyImage
 
-from configs.config import CONFIG_DIR, LOG_DIR, device
+from configs.config import CONFIG_DIR, LOG_DIR, device, DATA_NAME
 
 
 def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg, vis=None):
@@ -165,7 +165,7 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg, n_angle=40, single_angl
                          to8b(depths), fps=30, quality=8)
 
 
-@hydra.main(config_path=CONFIG_DIR, config_name="minions")
+@hydra.main(config_path=CONFIG_DIR, config_name=DATA_NAME)
 def main(cfg: DictConfig):
     # == visdom ==
     if cfg.visualization.visdom:

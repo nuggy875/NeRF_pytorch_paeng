@@ -28,6 +28,7 @@ dependencies:
       - configArgParse
       - omegaconf
       - hydra-core
+      - IQA_pytorch
   - pytorch
   - torchvision
   - cudatoolkit

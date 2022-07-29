@@ -36,10 +36,10 @@ training:
 testing:
   name: "hotdog_0728_2"
   test_iter: 200000
-  mode_test : False
-  mode_render : True
-  n_angle: 200
+  mode_test : True
+  mode_render : False
+  n_angle: 40
   single_angle : -1
   phi: -30.0
-  testskip: 8
+  testskip: 1
   

@@ -2,7 +2,7 @@ import argparse
 import torch
 import os
 
-device_ids = [1]
+device_ids = [0]
 device = torch.device('cuda:{}'.format(min(device_ids))
                       if torch.cuda.is_available() else 'cpu')
 
@@ -12,7 +12,7 @@ LOG_DIR = os.path.join(os.path.abspath(os.path.dirname(
 
 # [chair, drums, ficus, hotdog, lego, materials, mic, ship]
 # FIXME Something wrong with ficus & ship
-DATA_NAME = 'minions'
+DATA_NAME = 'hotdog'
 
 print('>> CONFIG File PATH : {}'.format(CONFIG_DIR))
 print('>> LOG_DIR File PATH : {}'.format(LOG_DIR))
