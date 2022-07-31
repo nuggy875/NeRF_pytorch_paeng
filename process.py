@@ -21,8 +21,8 @@ def get_rays(W, H, K, c2w):
     dirs = torch.stack([(i-K[0][2])/K[0][0],
                         -(j-K[1][2])/K[1][1],
                         -torch.ones_like(i)], -1)
-    rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
-    # rays_d = dirs @ c2w[:3, :3].T # TODO dot product test
+    # rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+    rays_d = dirs @ c2w[:3, :3].T  # it is okay
     rays_o = c2w[:3, -1].expand(rays_d.shape)
     return rays_o, rays_d
 
@@ -93,6 +93,13 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     input_dirs_embedded = fn_posenc_d(input_dirs_flat)  # [65536,27]
     embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1)
     # > Network
+
+    # assign to device
+    device = torch.device('cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+    embedded = embedded.to(device)
+    z_vals = z_vals.to(device)
+    rays_d = rays_d.to(device)
+
     # batchify
     chunk = cfg.render.chunk_pts
     outputs_flat = torch.cat([model(embedded[i:i+chunk])
@@ -110,12 +117,10 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
 
 def volumne_rendering(outputs, z_vals, rays_d):
 
-    def raw2alpha(raw, dists, act_fn=F.relu): return 1. - \
-        torch.exp(-act_fn(raw)*dists)
-
+    def raw2alpha(raw, dists, act_fn=F.relu): return 1. - torch.exp(-act_fn(raw)*dists)
+    device = outputs.get_device()
     dists = z_vals[..., 1:] - z_vals[..., :-1]
-    dists = torch.cat([dists, torch.Tensor([1e10]).expand(
-        dists[..., :1].shape)], -1)  # [N_rays, N_samples]
+    dists = torch.cat([dists, torch.Tensor([1e10]).to(device).expand(dists[..., :1].shape)], -1)  # [N_rays, N_samples]
     dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
 
     rgb = outputs[..., :3]
@@ -125,7 +130,7 @@ def volumne_rendering(outputs, z_vals, rays_d):
 
     # Density(alpha) X Transmittance
     transmittance = torch.cumprod(
-        torch.cat([torch.ones((alpha.shape[0], 1)), 1.-alpha + 1e-10], -1), -1)[:, :-1]
+        torch.cat([torch.ones((alpha.shape[0], 1)).to(device), 1.-alpha + 1e-10], -1), -1)[:, :-1]
     weights = alpha * transmittance
 
     rgb_map = torch.sum(weights.unsqueeze(-1) * rgb_sigmoid, -2)  # [N_rays, 3]
@@ -136,3 +141,123 @@ def volumne_rendering(outputs, z_vals, rays_d):
     rgb_map = rgb_map + (1.-acc_map.unsqueeze(-1))
     return rgb_map, disp_map, acc_map, weights, depth_map
 
+
+def sample_rays_and_pixel(rays_o, rays_d, target_img, cfg):
+
+    img_w, img_h = target_img.size()[:2]
+    coords = torch.stack(torch.meshgrid(torch.linspace(0, img_h - 1, img_h), torch.linspace(0, img_w - 1, img_w)), -1)  # (H, W, 2)
+    coords = torch.reshape(coords, [-1, 2])  # [ HxW , 2 ]
+
+    # 640000 개 중 1024개 뽑기
+    selected_idx = np.random.choice(a=coords.size(0), size=cfg.render.n_rays_per_image, replace=False)  # default 1024
+    selected_coords = coords[selected_idx].long()  # (N_rand, 2)
+
+    # == Sample Rays ==
+    rays_o = rays_o[selected_coords[:, 0], selected_coords[:, 1]]
+    rays_d = rays_d[selected_coords[:, 0], selected_coords[:, 1]]
+    # == Sample Pixel ==
+    target_img = target_img[selected_coords[:, 0], selected_coords[:, 1]]
+
+    return rays_o, rays_d, target_img  # [1024, 3]
+
+
+def batchify_rays_and_render_by_chunk(ray_o, ray_d, model, fn_posenc, fn_posenc_d, cfg):
+    flat_ray_o, flat_ray_d = ray_o.view(-1, 3), ray_d.view(-1, 3)  # [640000, 3], [640000, 3]
+    num_whole_rays = flat_ray_o.size(0)
+    rays = torch.cat((flat_ray_o, flat_ray_d), dim=-1)
+
+    all_ret = {}
+    chunk = cfg.render.chunk_ray
+    for i in range(0, num_whole_rays, chunk):
+        ret = render_rays(rays[i:i+chunk], model, fn_posenc, fn_posenc_d, cfg)
+        for k in ret:
+            if k not in all_ret:
+                all_ret[k] = []
+            all_ret[k].append(ret[k])
+    all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}
+    k_extract = ['rgb_map', 'disp_map', 'acc_map']
+    ret_list = [all_ret[k] for k in k_extract]
+    ret_dict = {k: all_ret[k] for k in all_ret if k not in k_extract}
+    return ret_list + [ret_dict]
+
+
+def render_rays(rays, model, fn_posenc, fn_posenc_d, cfg):
+    # 1. pre process : make (pts and dirs) (embedded)
+    embedded, z_vals, rays_d = pre_process(rays, fn_posenc, fn_posenc_d, cfg)
+
+    # ** assign to cuda **
+    # embedded = embedded.to('cuda:{}'.format(opts.gpu_ids[opts.rank]))
+    # z_vals = z_vals.to('cuda:{}'.format(opts.gpu_ids[opts.rank]))
+    # rays_d = rays_d.to('cuda:{}'.format(opts.gpu_ids[opts.rank]))
+
+    # 2. run model by net_chunk
+    chunk = cfg.render.chunk_pts
+    outputs_flat = torch.cat([model(embedded[i:i+chunk]) for i in range(0, embedded.shape[0], chunk)], 0)  # [net_c
+    size = [z_vals.size(0), z_vals.size(1), 4]      # [4096, 64, 4]
+    outputs = outputs_flat.reshape(size)
+
+    # 3. post process : render each pixel color by formula (3) in nerf paper
+    rgb_map, disp_map, acc_map, weights, depth_map = post_process(outputs, z_vals, rays_d)
+    ret = {'rgb_map': rgb_map, 'disp_map': disp_map,
+           'acc_map': acc_map, 'raw': outputs, 'weights': weights, 'depth_map': depth_map}
+    return ret
+
+
+def pre_process(rays, fn_posenc, fn_posenc_d, cfg):
+
+    N_rays = rays.size(0)
+    # assert N_rays == opts.chunk, 'N_rays must be same to chunk'
+    rays_o, rays_d = rays[:, :3], rays[:, 3:]
+    viewdirs = rays_d
+    viewdirs = viewdirs / torch.norm(viewdirs, dim=-1, keepdim=True)  # make normal vector
+
+    near = cfg.render.depth_near * torch.ones([N_rays, 1])
+    far = cfg.render.depth_far * torch.ones([N_rays, 1])
+
+    t_vals = torch.linspace(0., 1., steps=cfg.render.n_coarse_pts_per_ray)
+    z_vals = near * (1.-t_vals) + far * (t_vals)
+    z_vals = z_vals.expand([N_rays, cfg.render.n_coarse_pts_per_ray])
+    mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
+    upper = torch.cat([mids, z_vals[..., -1:]], -1)
+    lower = torch.cat([z_vals[..., :1], mids], -1)
+    t_rand = torch.rand([N_rays, cfg.render.n_coarse_pts_per_ray])
+    z_vals = lower + (upper-lower) * t_rand
+
+    # rays_o, rays_d : [B, 1, 3], z_vals : [B, 64, 1]
+    input_pts = rays_o.unsqueeze(1) + rays_d.unsqueeze(1) * z_vals.unsqueeze(-1)
+    input_pts_flat = input_pts.view(-1, 3)                                # [1024/4096, 64, 3] -> [65536/262144, 3]
+    input_pts_embedded = fn_posenc(input_pts_flat)                        # [n_pts, 63]
+
+    input_dirs = viewdirs.unsqueeze(1).expand(input_pts.size())           # [4096, 3] -> [4096, 1, 3]-> [4096, 64, 3]
+    input_dirs_flat = input_dirs.reshape(-1, 3)                           # [n_pts, 3]
+    input_dirs_embedded = fn_posenc_d(input_dirs_flat)                    # [n_pts, 27]
+
+    embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1)   # [n_pts, 90]
+
+    return embedded, z_vals, rays_d
+
+
+def post_process(outputs, z_vals, rays_d):
+    def raw2alpha(raw, dists, act_fn=F.relu): return 1. - torch.exp(-act_fn(raw)*dists)
+    dists = z_vals[..., 1:] - z_vals[..., :-1]
+    device = dists.get_device()
+    big_value = torch.Tensor([1e10]).to(device)
+    dists = torch.cat([dists, big_value.expand(dists[..., :1].shape)], -1)  # [N_rays, N_samples] 그런데 마지막에는 젤 큰 수 cat
+    dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
+
+    rgb = outputs[..., :3]
+    rgb_sigmoid = torch.sigmoid(rgb)
+
+    alpha = raw2alpha(outputs[..., 3], dists)  # [N_rays, N_samples]
+
+    # Density(alpha) X Transmittance
+    transmittance = torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1)).to(device), 1.-alpha + 1e-10], -1), -1)[:, :-1]
+    weights = alpha * transmittance
+
+    rgb_map = torch.sum(weights.unsqueeze(-1) * rgb_sigmoid, -2)  # [N_rays, 3]
+    depth_map = torch.sum(weights * z_vals, -1)
+    disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map), depth_map / torch.sum(weights, -1))
+    acc_map = torch.sum(weights, -1)
+    # alpha to real color
+    rgb_map = rgb_map + (1.-acc_map.unsqueeze(-1))
+    return rgb_map, disp_map, acc_map, weights, depth_map
