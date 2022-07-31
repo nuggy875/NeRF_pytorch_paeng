@@ -12,11 +12,13 @@ from tqdm import tqdm, trange
 
 from dataset import load_blender, load_custom
 from model import NeRF, get_positional_encoder
-from process import run_model_batchify, get_rays, preprocess_rays
+from process import run_model_batchify, get_rays, preprocess_rays, sample_rays_and_pixel, batchify_rays_and_render_by_chunk
 from utils import img2mse, mse2psnr, saveNumpyImage
+
+from train import train_each_iters
 from test import test, render
 
-from configs.config import CONFIG_DIR, LOG_DIR, device, DATA_NAME
+from configs.config import CONFIG_DIR, LOG_DIR, DATA_NAME
 
 np.random.seed(0)
 
@@ -52,6 +54,8 @@ def main(cfg: DictConfig):
         i_test = []
         img_h, img_w, img_k = hwk
 
+    device = torch.device('cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+
     # == 2. POSITIONAL ENCODING - Define Function ==
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
@@ -85,76 +89,10 @@ def main(cfg: DictConfig):
     result_best = {'i': 0, 'loss': 0, 'psnr': 0}
 
     for i in trange(cfg.training.start_iter + 1, cfg.training.N_iters+1):
-        # [1] Get Target & Rays         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        i_img = np.random.choice(i_train)
-        target_img = images[i_img]
-        target_img = torch.Tensor(target_img).to(device)
-        target_pose = poses[i_img, :3, :4]
-        rays_o, rays_d = get_rays(
-            img_w, img_h, img_k, torch.Tensor(target_pose).to(device))
 
-        # [2] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        # HxW 의 Pixel 중에서 n_rays_per_image(1024)개의 랜덤 샘플링
-        coords = torch.stack(torch.meshgrid(torch.linspace(
-            0, img_h-1, img_h), torch.linspace(0, img_w-1, img_w)), -1)  # (H, W, 2)
-        coords = torch.reshape(coords, [-1, 2])  # [ HxW , 2 ]
-        selected_idx = np.random.choice(
-            coords.shape[0], size=[cfg.render.n_rays_per_image], replace=False)  # default 1024
-        selected_coords = coords[selected_idx].long()  # (N_rand, 2)
-        # == Sample Rays ==
-        rays_o = rays_o[selected_coords[:, 0], selected_coords[:, 1]]
-        rays_d = rays_d[selected_coords[:, 0], selected_coords[:, 1]]
-        # == Sample Pixel ==
-        target_img_s = target_img[selected_coords[:, 0],
-                                  selected_coords[:, 1]]
-        # [3] Preprocess Rays   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        rays = preprocess_rays(rays_o, rays_d, cfg)
-        # [4] Run Model         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
-                                                         fn_posenc=fn_posenc,
-                                                         fn_posenc_d=fn_posenc_d,
-                                                         model=model,
-                                                         cfg=cfg)
-
-        optimizer.zero_grad()
-        loss = img2mse(target_img_s, pred_rgb)
-        psnr = mse2psnr(loss)
-        loss.backward()
-        optimizer.step()
-
-        checkpoint = {'idx': i,
-                      'model_state_dict': model.state_dict(),
-                      'optimizer_state_dict': optimizer.state_dict()}
-        save_path = os.path.join(LOG_DIR, cfg.training.name)
-        os.makedirs(save_path, exist_ok=True)
-
-        # ====  Print LOG  ====
-        if i % cfg.training.idx_print == 0:
-            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
-
-        if i % cfg.training.idx_visdom == 0 and vis is not None:
-            vis.line(X=torch.ones((1, 2)).cpu() * i,
-                     Y=torch.Tensor([loss, psnr]).unsqueeze(0).cpu(),
-                     win='loss_psnr_{}'.format(cfg.training.name),
-                     update='append',
-                     opts=dict(xlabel='iteration',
-                               ylabel='loss_psnr',
-                               title='LOSS&PSNR for {}'.format(
-                                   cfg.training.name),
-                               legend=['LOSS', 'PSNR']))
-
-        # ====  Save .pth file  ====
-        if i % cfg.training.idx_save == 0 and i > 0:
-            torch.save(checkpoint, os.path.join(
-                save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
-
-        # == GET Best result for training ==
-        if result_best['psnr'] < psnr:
-            result_best['i'] = i
-            result_best['loss'] = loss
-            result_best['psnr'] = psnr
-            torch.save(checkpoint, os.path.join(
-                save_path, cfg.training.name + '_best.pth.tar'))
+        # ==== T R A I N I N G ====
+        result_best = train_each_iters(i, i_train, images, poses, hwk, model, fn_posenc, fn_posenc_d, vis, optimizer,
+                                       result_best, cfg)
 
         # ====  T E S T I N G  ====
         if i % cfg.training.idx_test == 0 and i > 0 and cfg.testing.mode_test:
@@ -166,6 +104,7 @@ def main(cfg: DictConfig):
                  test_poses=torch.Tensor(poses[i_test]).to(device),
                  hwk=hwk,
                  cfg=cfg)
+
         # ====  R E N D E R I N G  ====
         if i % cfg.training.idx_video == 0 and i > 0 and cfg.testing.mode_render:
             render(idx=i,
@@ -199,6 +138,6 @@ def main(cfg: DictConfig):
 
 
 if __name__ == "__main__":
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    torch.cuda.set_device(device)
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    # torch.cuda.set_device(device)
     main()

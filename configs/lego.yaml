@@ -2,9 +2,14 @@ visualization:
   visdom: True
   visdom_port: "8900"
 
+device:
+  gpu_ids:
+    - 0
+  rank: 0
+
 data:
   name: "lego"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
+  root: 'C:\Users\csm81\Desktop\nerf\nerf_pytorch_\data\nerf_synthetic\lego'
   root_local: "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego"
   type: "blender"
   white_bkgd: True
@@ -18,13 +23,13 @@ render:
   depth_near: 2.
   depth_far: 6.
   n_rays_per_image: 1024
-  n_coarse_pts_per_ray: 512
+  n_coarse_pts_per_ray: 256
   n_fine_pts_per_ray: 128
   chunk_ray: 4096
   chunk_pts: 65536
 
 training:
-  name: "lego_0722_1"
+  name: "lego_0731_1_SM"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -35,12 +40,12 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "lego_0722_1"
+  name: "lego_0731_1_SM"
   test_iter: 250000
-  mode_test : False
+  mode_test : True
   mode_render : True
   n_angle: 1
   single_angle : 270
   phi: -30.0
-  testskip: 1
+  testskip: 8
   

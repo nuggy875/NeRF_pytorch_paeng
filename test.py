@@ -13,7 +13,7 @@ from model import NeRF, get_positional_encoder
 from process import run_model_batchify, get_rays, preprocess_rays
 from utils import getSSIM, getLPIPS, img2mse, mse2psnr, to8b, saveNumpyImage
 
-from configs.config import CONFIG_DIR, LOG_DIR, device, DATA_NAME
+from configs.config import CONFIG_DIR, LOG_DIR, DATA_NAME
 
 
 def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg, vis=None):
@@ -194,6 +194,8 @@ def main(cfg: DictConfig):
         i_test = []
         img_h, img_w, img_k = hwk
 
+    device = torch.device('cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
     # output_ch = 5 if cfg.model.n_importance > 0 else 4
@@ -224,6 +226,6 @@ def main(cfg: DictConfig):
 
 
 if __name__ == '__main__':
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    torch.cuda.set_device(device)
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    # torch.cuda.set_device(device)
     main()
