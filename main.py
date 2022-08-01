@@ -54,19 +54,26 @@ def main(cfg: DictConfig):
         i_test = []
         img_h, img_w, img_k = hwk
 
-    device = torch.device('cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+    device = torch.device('cuda:{}'.format(
+        cfg.device.gpu_ids[cfg.device.rank]))
 
     # == 2. POSITIONAL ENCODING - Define Function ==
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
 
-    # output_ch = 5 if cfg.model.n_importance > 0 else 4
     skips = [4]
 
-    # == 3. DEFINE MODEL (NeRF) ==
+    # == 3-1. DEFINE MODEL (NeRF) ==
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
     grad_vars = list(model.parameters())
+
+    # == 3-2. DEFINE FINE MODEL (NeRF) ==
+    model_fine = None
+    if cfg.render.n_fine_pts_per_ray > 0:
+        model_fine = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
+                          input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
+        grad_vars += list(model_fine.parameters())
 
     # == 4. OPTIMIZER ==
     optimizer = torch.optim.Adam(
@@ -77,7 +84,10 @@ def main(cfg: DictConfig):
         checkpoint = torch.load(os.path.join(
             LOG_DIR, cfg.training.name, cfg.training.name+'_{}.pth.tar'.format(cfg.training.start_iter)))
         model.load_state_dict(checkpoint['model_state_dict'])
+        if cfg.render.n_fine_pts_per_ray > 0:
+            model_fine.load_state_dict(checkpoint['model_fine_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
         print('\nLoaded checkpoint from iter:{}'.format(
             int(cfg.training.start_iter)))
 
@@ -91,7 +101,7 @@ def main(cfg: DictConfig):
     for i in trange(cfg.training.start_iter + 1, cfg.training.N_iters+1):
 
         # ==== T R A I N I N G ====
-        result_best = train_each_iters(i, i_train, images, poses, hwk, model, fn_posenc, fn_posenc_d, vis, optimizer,
+        result_best = train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posenc, fn_posenc_d, vis, optimizer,
                                        result_best, cfg)
 
         # ====  T E S T I N G  ====
@@ -100,6 +110,7 @@ def main(cfg: DictConfig):
                  fn_posenc=fn_posenc,
                  fn_posenc_d=fn_posenc_d,
                  model=model,
+                 model_fine=model_fine,
                  test_imgs=torch.Tensor(images[i_test]).to(device),
                  test_poses=torch.Tensor(poses[i_test]).to(device),
                  hwk=hwk,
@@ -111,6 +122,7 @@ def main(cfg: DictConfig):
                    fn_posenc=fn_posenc,
                    fn_posenc_d=fn_posenc_d,
                    model=model,
+                   model_fine=model_fine,
                    hwk=hwk,
                    cfg=cfg)
 

@@ -7,7 +7,7 @@ from utils import mse2psnr, img2mse
 from process import sample_rays_and_pixel, get_rays, preprocess_rays, run_model_batchify
 
 
-def train_each_iters(i, i_train, images, poses, hwk, model, fn_posenc, fn_posenc_d, vis, optimizer,
+def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posenc, fn_posenc_d, vis, optimizer,
                      result_best, cfg):
 
     img_h, img_w, img_k = hwk
@@ -20,7 +20,8 @@ def train_each_iters(i, i_train, images, poses, hwk, model, fn_posenc, fn_posenc
 
     # [2] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # HxW 의 Pixel 중에서 n_rays_per_image(1024)개의 랜덤 샘플링
-    rays_o, rays_d, target_img_s = sample_rays_and_pixel(rays_o, rays_d, target_img, cfg)
+    rays_o, rays_d, target_img_s = sample_rays_and_pixel(
+        rays_o, rays_d, target_img, cfg)
 
     # [3] Preprocess Rays   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     rays = preprocess_rays(rays_o, rays_d, cfg)
@@ -30,10 +31,12 @@ def train_each_iters(i, i_train, images, poses, hwk, model, fn_posenc, fn_posenc
                                                      fn_posenc=fn_posenc,
                                                      fn_posenc_d=fn_posenc_d,
                                                      model=model,
+                                                     model_fine=model_fine,
                                                      cfg=cfg)
 
     # assign target_img
-    target_img_s = target_img_s.to('cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+    target_img_s = target_img_s.to(
+        'cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
 
     optimizer.zero_grad()
     loss = img2mse(target_img_s, pred_rgb)
@@ -43,6 +46,7 @@ def train_each_iters(i, i_train, images, poses, hwk, model, fn_posenc, fn_posenc
 
     checkpoint = {'idx': i,
                   'model_state_dict': model.state_dict(),
+                  'model_fine_state_dict': model_fine.state_dict(),
                   'optimizer_state_dict': optimizer.state_dict()}
     save_path = os.path.join(LOG_DIR, cfg.training.name)
     os.makedirs(save_path, exist_ok=True)

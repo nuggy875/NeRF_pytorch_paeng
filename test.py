@@ -16,12 +16,13 @@ from utils import getSSIM, getLPIPS, img2mse, mse2psnr, to8b, saveNumpyImage
 from configs.config import CONFIG_DIR, LOG_DIR, DATA_NAME
 
 
-def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg, vis=None):
+def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, hwk, cfg, vis=None):
     print('Start Testing for idx'.format(idx))
     model.eval()
     checkpoint = torch.load(os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
+    model_fine.load_state_dict(checkpoint['model_fine_state_dict'])
 
     save_test_dir = os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}'.format(idx), 'test_result')
@@ -43,6 +44,7 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg, vi
                                                                            fn_posenc=fn_posenc,
                                                                            fn_posenc_d=fn_posenc_d,
                                                                            model=model,
+                                                                           model_fine=model_fine,
                                                                            cfg=cfg)
             # SAVE test image
             rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
@@ -97,7 +99,7 @@ def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg, vi
     f.close()
 
 
-def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg, n_angle=40, single_angle=-1):
+def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, n_angle=40, single_angle=-1):
     '''
     default ) n_angle : 40 / single_angle = -1
     if single_angle is not -1 , it would result single rendering image.
@@ -132,6 +134,7 @@ def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg, n_angle=40, single_angl
                                                                            fn_posenc=fn_posenc,
                                                                            fn_posenc_d=fn_posenc_d,
                                                                            model=model,
+                                                                           model_fine=model_fine,
                                                                            cfg=cfg)
             # save test image
             rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
@@ -194,7 +197,8 @@ def main(cfg: DictConfig):
         i_test = []
         img_h, img_w, img_k = hwk
 
-    device = torch.device('cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+    device = torch.device('cuda:{}'.format(
+        cfg.device.gpu_ids[cfg.device.rank]))
 
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
