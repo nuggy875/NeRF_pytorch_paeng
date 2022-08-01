@@ -90,7 +90,9 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
         cfg.device.gpu_ids[cfg.device.rank]))
     embedded = embedded.to(device)
     z_vals = z_vals.to(device)
+    rays_o = rays_o.to(device)
     rays_d = rays_d.to(device)
+    viewdirs = viewdirs.to(device)
 
     # ===== 1-3) Run Network (COARSE NETWORK) =====
     chunk = cfg.render.chunk_pts
@@ -114,7 +116,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
         z_samples = z_samples.detach()
         z_vals_fine, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
         # ===== 2-2) Make Input (FINE NETWORK) =====
-        embedded_fine = make_input(rays_o, rays_d, z_vals,
+        embedded_fine = make_input(rays_o, rays_d, z_vals_fine,
                                    viewdirs, fn_posenc, fn_posenc_d)
         z_vals_fine = z_vals_fine.to(device)
         embedded_fine = embedded_fine.to(device)
@@ -123,7 +125,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
         outputs_flat = torch.cat([model_fine(embedded_fine[i:i+chunk])
                                   for i in range(0, embedded_fine.shape[0], chunk)], 0)
         outputs = torch.reshape(outputs_flat, list(
-            z_vals.shape) + [outputs_flat.shape[-1]])  # [1024, 64, 4]
+            z_vals_fine.shape) + [outputs_flat.shape[-1]])  # [1024, 192, 4]
         # ===== 2-4) Volume Rendering (FINE NETWORK) =====
         rgb_map, disp_map, acc_map, weights, depth_map = volumne_rendering(
             outputs, z_vals_fine, rays_d)
@@ -317,6 +319,7 @@ def post_process(outputs, z_vals, rays_d):
 # Hierarchical sampling (section 5.2)
 def hierarchical_sampling(bins, weights, N_samples, det=False, pytest=False):
     # Get pdf
+    device = weights.get_device()
     weights = weights + 1e-5  # prevent nans
     pdf = weights / torch.sum(weights, -1, keepdim=True)
     cdf = torch.cumsum(pdf, -1)
@@ -342,7 +345,7 @@ def hierarchical_sampling(bins, weights, N_samples, det=False, pytest=False):
         u = torch.Tensor(u)
 
     # Invert CDF
-    u = u.contiguous()
+    u = u.contiguous().to(device)
     inds = torch.searchsorted(cdf, u, right=True)
     below = torch.max(torch.zeros_like(inds-1), inds-1)
     above = torch.min((cdf.shape[-1]-1) * torch.ones_like(inds), inds)
