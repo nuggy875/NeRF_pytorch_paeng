@@ -5,13 +5,14 @@ visualization:
 device:
   gpu_ids:
     - 0
-  rank: 0
+    - 1
+  rank: 1
 
 data:
-  name: "lego"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
-  root_p: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
-  root_sm: 'C:\Users\csm81\Desktop\nerf\nerf_pytorch_\data\nerf_synthetic\lego'
+  name: "chair"
+  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/chair"
+  root_p: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/chair"
+  root_sm: 'C:\Users\csm81\Desktop\nerf\nerf_pytorch_\data\nerf_synthetic\chair'
   type: "blender"
   white_bkgd: True
   reduce_res: 0.
@@ -25,28 +26,28 @@ render:
   depth_far: 6.
   n_rays_per_image: 4096
   n_coarse_pts_per_ray: 64
-  n_fine_pts_per_ray: 128
+  n_fine_pts_per_ray: 0
   chunk_ray: 4096
   chunk_pts: 65536
 
 training:
-  name: "lego_0731_1_SM"
+  name: "0801_1_chair"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
-  idx_save: 50000
-  idx_test: 50000
+  idx_save: 100000
+  idx_test: 100000
   idx_video: 100000
   idx_visdom: 100
 
 testing:
-  name: "lego_0731_1_SM"
+  name: "0801_1_chair"
   test_iter: 200000
   mode_test : True
   mode_render : True
-  n_angle: 120
+  n_angle: 200
   single_angle : -1
   phi: -30.0
-  testskip: 8
+  testskip: 1
   
