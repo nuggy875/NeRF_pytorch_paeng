@@ -11,7 +11,9 @@ from configs.config import LOG_DIR
 def img2mse(x, y): return torch.mean((x - y) ** 2)
 
 
-def mse2psnr(x): return -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
+def mse2psnr(x):
+    device = x.get_device()
+    return -10. * torch.log(x) / torch.log(torch.Tensor([10.])).to(device)
 
 
 def getSSIM(pred, gt):
