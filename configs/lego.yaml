@@ -23,7 +23,7 @@ model:
 render:
   depth_near: 2.
   depth_far: 6.
-  n_rays_per_image: 1024
+  n_rays_per_image: 4096
   n_coarse_pts_per_ray: 64
   n_fine_pts_per_ray: 128
   chunk_ray: 4096
@@ -45,7 +45,7 @@ testing:
   test_iter: 200000
   mode_test : True
   mode_render : True
-  n_angle: 120
+  n_angle: 200
   single_angle : -1
   phi: -30.0
   testskip: 8
