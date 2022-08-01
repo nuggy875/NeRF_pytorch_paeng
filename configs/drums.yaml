@@ -16,14 +16,14 @@ model:
 render:
   depth_near: 2.
   depth_far: 6.
-  n_rays_per_image: 1024
-  n_coarse_pts_per_ray: 512
+  n_rays_per_image: 4096
+  n_coarse_pts_per_ray: 64
   n_fine_pts_per_ray: 128
   chunk_ray: 4096
   chunk_pts: 65536
 
 training:
-  name: "drums_0725_1"
+  name: "drums_0730_1"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -34,12 +34,12 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "drums_0725_1"
+  name: "drums_0730_1"
   test_iter: 200000
   mode_test : True
-  mode_render : True
-  n_angle: 40
+  mode_render : False
+  n_angle: 120
   single_angle : -1
   phi: -30.0
-  testskip: 8
+  testskip: 1
   
