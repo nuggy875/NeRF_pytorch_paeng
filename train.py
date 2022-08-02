@@ -44,10 +44,15 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
     loss.backward()
     optimizer.step()
 
-    checkpoint = {'idx': i,
-                  'model_state_dict': model.state_dict(),
-                  'model_fine_state_dict': model_fine.state_dict(),
-                  'optimizer_state_dict': optimizer.state_dict()}
+    if cfg.render.n_fine_pts_per_ray > 0:
+        checkpoint = {'idx': i,
+                        'model_state_dict': model.state_dict(),
+                        'model_fine_state_dict': model_fine.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()}
+    else:
+        checkpoint = {'idx': i,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()}
     save_path = os.path.join(LOG_DIR, cfg.training.name)
     os.makedirs(save_path, exist_ok=True)
 
