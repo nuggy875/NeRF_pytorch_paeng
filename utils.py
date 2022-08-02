@@ -26,7 +26,7 @@ def getSSIM(pred, gt):
 def getLPIPS(pred, gt):
     # LLPIS_ = LPIPSvgg(channels=3)
     # loss_lpips = LLPIS_(rgb.permute(2, 0, 1).unsqueeze(0), test_imgs[i].permute(2, 0, 1).unsqueeze(0))
-    LPIPS_ = lpips.LPIPS(net='vgg')
+    LPIPS_ = lpips.LPIPS(net='vgg').to(pred.get_device())
     return LPIPS_(pred.permute(2, 0, 1), gt.permute(2, 0, 1))
 
 

@@ -15,7 +15,7 @@ def get_rays(W, H, K, c2w):
     # dot product, equals to: [c2w.dot(dir) for dir in dirs]
     # Translate camera frame's origin to the world frame. It is the origin of all rays.
     '''
-    i, j = torch.meshgrid(torch.linspace(0, W-1, W), torch.linspace(0, H-1, H))
+    i, j = torch.meshgrid(torch.linspace(0, W-1, W, device=c2w.get_device()), torch.linspace(0, H-1, H, device=c2w.get_device()))
     i = i.t()
     j = j.t()
     dirs = torch.stack([(i-K[0][2])/K[0][0],
@@ -73,13 +73,13 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
     viewdirs = ray_batch[:, -3:]
 
     # ===== 1-1) make z_vals (input) (COARSE NETWORK)
-    t_vals = torch.linspace(0., 1., steps=cfg.render.n_coarse_pts_per_ray)
+    t_vals = torch.linspace(0., 1., steps=cfg.render.n_coarse_pts_per_ray, device=viewdirs.get_device())
     z_vals = near * (1.-t_vals) + far * (t_vals)
     z_vals = z_vals.expand([N_rays, cfg.render.n_coarse_pts_per_ray])
     mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
     upper = torch.cat([mids, z_vals[..., -1:]], -1)
     lower = torch.cat([z_vals[..., :1], mids], -1)
-    t_rand = torch.rand(z_vals.shape)
+    t_rand = torch.rand(z_vals.shape, device=z_vals.get_device())
     z_vals = lower+(upper-lower)*t_rand
     # ===== 1-2) Make Input (COARSE NETWORK) =====
     embedded = make_input(rays_o, rays_d, z_vals,
