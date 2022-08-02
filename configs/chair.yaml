@@ -43,11 +43,11 @@ training:
 
 testing:
   name: "0801_1_chair"
-  test_iter: 200000
+  test_iter: 100000
   mode_test : True
   mode_render : True
-  n_angle: 200
+  n_angle: 40
   single_angle : -1
   phi: -30.0
-  testskip: 1
+  testskip: 8
   
