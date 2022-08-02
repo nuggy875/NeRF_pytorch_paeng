@@ -45,7 +45,7 @@ testing:
   test_iter: 50000
   mode_test : True
   mode_render : True
-  n_angle: 200
+  n_angle: 40
   single_angle : -1
   phi: -30.0
   testskip: 8

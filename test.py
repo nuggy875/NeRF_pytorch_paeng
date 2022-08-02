@@ -17,7 +17,7 @@ from configs.config import CONFIG_DIR, LOG_DIR, DATA_NAME
 
 
 def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, hwk, cfg, vis=None):
-    print('Start Testing for idx'.format(idx))
+    print('>>> Start Testing for idx'.format(idx))
     model.eval()
     checkpoint = torch.load(os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}.pth.tar'.format(idx)))
@@ -101,15 +101,15 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
     f.close()
 
 
-def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, n_angle=40, single_angle=-1):
+def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_angle=40, single_angle=-1):
     '''
     default ) n_angle : 40 / single_angle = -1
     if single_angle is not -1 , it would result single rendering image.
     '''
-    print('Start Rendering for idx'.format(idx))
+    print('>>> Start Rendering for idx'.format(idx))
 
     render_poses = get_render_pose(
-        n_angle=n_angle, single_angle=single_angle, phi=cfg.testing.phi)
+        n_angle=n_angle, single_angle=single_angle, phi=cfg.testing.phi).to(device)
 
     model.eval()
     checkpoint = torch.load(os.path.join(
@@ -236,6 +236,7 @@ def main(cfg: DictConfig):
                model_fine=model_fine,
                hwk=hwk,
                cfg=cfg,
+               device=device,
                n_angle=cfg.testing.n_angle,
                single_angle=cfg.testing.single_angle
                )

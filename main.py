@@ -124,7 +124,8 @@ def main(cfg: DictConfig):
                    model=model,
                    model_fine=model_fine,
                    hwk=hwk,
-                   cfg=cfg)
+                   cfg=cfg,
+                   device=device)
 
     # Test & Render for Best result
     if cfg.testing.mode_test:
@@ -132,6 +133,7 @@ def main(cfg: DictConfig):
              fn_posenc=fn_posenc,
              fn_posenc_d=fn_posenc_d,
              model=model,
+             model_fine=model_fine,
              test_imgs=torch.Tensor(images[i_test]).to(device),
              test_poses=torch.Tensor(poses[i_test]).to(device),
              hwk=hwk,
@@ -142,8 +144,10 @@ def main(cfg: DictConfig):
                fn_posenc=fn_posenc,
                fn_posenc_d=fn_posenc_d,
                model=model,
+               model_fine=model_fine,
                hwk=hwk,
-               cfg=cfg)
+               cfg=cfg,
+               device=device)
 
     print('BEST Result ) i : {} , LOSS : {} , PSNR : {}'.format(
         result_best['i'], result_best['loss'], result_best['psnr']))
