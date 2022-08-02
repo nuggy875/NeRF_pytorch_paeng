@@ -16,7 +16,7 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
     target_img = images[i_img]
     target_img = torch.Tensor(target_img)
     target_pose = poses[i_img, :3, :4]
-    rays_o, rays_d = get_rays(img_w, img_h, img_k, torch.Tensor(target_pose))
+    rays_o, rays_d = get_rays(img_w, img_h, img_k, torch.Tensor(target_pose).to(cfg.device.gpu_ids[cfg.device.rank]))
 
     # [2] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # HxW 의 Pixel 중에서 n_rays_per_image(1024)개의 랜덤 샘플링

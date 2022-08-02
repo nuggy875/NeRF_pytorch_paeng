@@ -88,7 +88,7 @@ def main(cfg: DictConfig):
             model_fine.load_state_dict(checkpoint['model_fine_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-        print('\nLoaded checkpoint from iter:{}'.format(
+        print('\n>> RESUME :: Loaded checkpoint from iter:{}'.format(
             int(cfg.training.start_iter)))
 
     # ====  T R A I N I N G  ====

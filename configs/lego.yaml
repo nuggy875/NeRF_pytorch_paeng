@@ -5,7 +5,8 @@ visualization:
 device:
   gpu_ids:
     - 0
-  rank: 0
+    - 1
+  rank: 1
 
 data:
   name: "lego"
@@ -31,7 +32,7 @@ render:
 
 training:
   name: "0801_2_lego"
-  start_iter: 0
+  start_iter: 50000
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000

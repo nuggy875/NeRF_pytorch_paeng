@@ -11,8 +11,7 @@ LOG_DIR = os.path.join(os.path.abspath(os.path.dirname(
     os.path.abspath(os.path.dirname(os.path.realpath(__file__))))), "logs")
 
 # [chair, drums, ficus, hotdog, lego, materials, mic, ship]
-# FIXME Something wrong with ficus & ship
-DATA_NAME = 'chair'
+DATA_NAME = 'lego'
 
 print('>> CONFIG File PATH : {}'.format(CONFIG_DIR))
 print('>> LOG_DIR File PATH : {}'.format(LOG_DIR))
