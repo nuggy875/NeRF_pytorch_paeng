@@ -6,13 +6,11 @@ device:
   gpu_ids:
     - 0
     - 1
-  rank: 0
+  rank: 1
 
 data:
-  name: "chair"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/chair"
-  root_p: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/chair"
-  root_sm: 'C:\Users\csm81\Desktop\nerf\nerf_pytorch_\data\nerf_synthetic\chair'
+  name: "ficus"
+  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/ficus"
   type: "blender"
   white_bkgd: True
   reduce_res: 0.
@@ -25,29 +23,29 @@ render:
   depth_near: 2.
   depth_far: 6.
   n_rays_per_image: 4096
-  n_coarse_pts_per_ray: 64
-  n_fine_pts_per_ray: 128
+  n_coarse_pts_per_ray: 256
+  n_fine_pts_per_ray: 0
   chunk_ray: 4096
   chunk_pts: 65536
 
 training:
-  name: "0804_1_chair"
+  name: "0803_2_ficus"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
   idx_save: 50000
-  idx_test: 200000
-  idx_video: 200000
+  idx_test: 50000
+  idx_video: 100000
   idx_visdom: 100
 
 testing:
-  name: "0804_1_chair"
-  test_iter: 200000
+  name: "0803_2_ficus"
+  test_iter: 100000
   mode_test : True
   mode_render : True
   n_angle: 40
   single_angle : -1
   phi: -30.0
-  testskip: 1
+  testskip: 8
   
