@@ -6,11 +6,11 @@ device:
   gpu_ids:
     - 0
     - 1
-  rank: 1
+  rank: 0
 
 data:
-  name: "drums"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/drums"
+  name: "materials"
+  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/materials"
   type: "blender"
   white_bkgd: True
   reduce_res: 0.
@@ -29,7 +29,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "0804_2_drums"
+  name: "0804_4_materials"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -40,9 +40,9 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "0804_2_drums"
+  name: "0804_4_materials"
   test_iter: 200000
-  mode_test : False
+  mode_test : True
   mode_render : True
   n_angle: 40
   single_angle : -1

@@ -31,7 +31,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "0801_2_lego"
+  name: "0805_1_lego"
   start_iter: 50000
   N_iters: 200000
   lr: 5e-4
@@ -42,7 +42,7 @@ training:
   idx_visdom: 100
 
 testing:
-  name: "0801_2_lego"
+  name: "0805_1_lego"
   test_iter: 50000
   mode_test : True
   mode_render : True

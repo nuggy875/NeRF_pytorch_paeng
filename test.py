@@ -146,6 +146,7 @@ def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_a
             disp = torch.reshape(pred_disp, [img_h, img_w])
             acc = torch.reshape(pred_acc, [img_h, img_w])
             depth = torch.reshape(predextras['depth_map'], [img_h, img_w])
+
             rgb_np = rgb.cpu().numpy()
             disp_np = disp.cpu().numpy()
             depth_np = depth.cpu().numpy()
@@ -167,6 +168,8 @@ def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_a
     if single_angle == -1:
         imageio.mimwrite(os.path.join(save_render_dir, "rgb.mp4"),
                          to8b(rgbs), fps=30, quality=8)
+        imageio.mimwrite(os.path.join(save_render_dir, "rgb.gif"),
+                         to8b(rgbs), duration=0.04)
         imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
                          to8b(disps / np.max(disps)), fps=30, quality=8)
         imageio.mimwrite(os.path.join(save_render_dir, "depth.mp4"),

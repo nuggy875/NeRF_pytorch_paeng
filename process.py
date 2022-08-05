@@ -15,7 +15,8 @@ def get_rays(W, H, K, c2w):
     # dot product, equals to: [c2w.dot(dir) for dir in dirs]
     # Translate camera frame's origin to the world frame. It is the origin of all rays.
     '''
-    i, j = torch.meshgrid(torch.linspace(0, W-1, W, device=c2w.get_device()), torch.linspace(0, H-1, H, device=c2w.get_device()))
+    i, j = torch.meshgrid(torch.linspace(0, W-1, W, device=c2w.get_device()),
+                          torch.linspace(0, H-1, H, device=c2w.get_device()))
     i = i.t()
     j = j.t()
     dirs = torch.stack([(i-K[0][2])/K[0][0],
@@ -73,7 +74,8 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
     viewdirs = ray_batch[:, -3:]
 
     # ===== 1-1) make z_vals (input) (COARSE NETWORK)
-    t_vals = torch.linspace(0., 1., steps=cfg.render.n_coarse_pts_per_ray, device=viewdirs.get_device())
+    t_vals = torch.linspace(
+        0., 1., steps=cfg.render.n_coarse_pts_per_ray, device=viewdirs.get_device())
     z_vals = near * (1.-t_vals) + far * (t_vals)
     z_vals = z_vals.expand([N_rays, cfg.render.n_coarse_pts_per_ray])
     mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
@@ -106,10 +108,11 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
     rgb_map, disp_map, acc_map, weights, depth_map = volumne_rendering(
         outputs, z_vals, rays_d)
 
+    rgb_map_c = None
     # ===== 2) FINE Network (N_f) (output : [1024, 192(coarse:64 + fine:128), 4])
     if cfg.render.n_fine_pts_per_ray > 0:
         # ===== 2-1) make z_vals (sampling) (FINE NETWORK)
-        rgb_map_0, disp_map_0, acc_map_0 = rgb_map, disp_map, acc_map
+        rgb_map_c, disp_map_c, acc_map_c = rgb_map, disp_map, acc_map
         z_vals_mid = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
         z_samples = hierarchical_sampling(
             z_vals_mid, weights[..., 1:-1], cfg.render.n_fine_pts_per_ray)
@@ -131,7 +134,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
             outputs, z_vals_fine, rays_d)
 
     ret = {'rgb_map': rgb_map, 'disp_map': disp_map,
-           'acc_map': acc_map, 'raw': outputs, 'depth_map': depth_map}
+           'acc_map': acc_map, 'raw': outputs, 'depth_map': depth_map, 'rgb_map_c': rgb_map_c}
     return ret
 
 
