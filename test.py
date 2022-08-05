@@ -89,13 +89,19 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
 
     f = open(os.path.join(save_test_dir, "_result.txt"), 'w')
     result_sum = {'psnr': 0, 'ssim': 0, 'lpips': 0}
+    result_best = {'psnr': 0, 'ssim': 0, 'lpips': 1}
     for i in range(len(losses)):
         line = 'idx:{}\tloss:{}\tpsnr:{}\tssim:{}\tlpips:{}\n'.format(
             i, losses[i], perform_PSNR[i], perform_SSIM[i], perform_LPIPS[i])
         result_sum['psnr'] = result_sum['psnr'] + perform_PSNR[i]
         result_sum['ssim'] = result_sum['ssim'] + perform_SSIM[i]
         result_sum['lpips'] = result_sum['lpips'] + perform_LPIPS[i]
+        result_best['psnr'] = perform_PSNR[i] if result_best['psnr'] < perform_PSNR[i] else result_best['psnr']
+        result_best['ssim'] = perform_SSIM[i] if result_best['ssim'] < perform_SSIM[i] else result_best['ssim']
+        result_best['lpips'] = perform_LPIPS[i] if result_best['lpips'] > perform_LPIPS[i] else result_best['lpips']
         f.write(line)
+    f.write('Best Value ) PSNR : {}\tSSIM : {}\tLPIPS : {}'.format(
+        result_best['psnr'], result_best['ssim'], result_best['lpips']))
     f.write('Mean Value ) PSNR : {}\tSSIM : {}\tLPIPS : {}'.format(
         result_sum['psnr']/len(losses), result_sum['ssim']/len(losses), result_sum['lpips']/len(losses)))
     f.close()
