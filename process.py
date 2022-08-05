@@ -182,10 +182,19 @@ def volumne_rendering(outputs, z_vals, rays_d):
 
 
 def sample_rays_and_pixel(rays_o, rays_d, target_img, cfg):
-
     img_w, img_h = target_img.size()[:2]
-    coords = torch.stack(torch.meshgrid(torch.linspace(
-        0, img_h - 1, img_h), torch.linspace(0, img_w - 1, img_w)), -1)  # (H, W, 2)
+
+    if cfg.training.precrop_iters > 0:
+        dH = int(img_h//2 * cfg.training.precrop_frac)
+        dW = int(img_w//2 * cfg.training.precrop_frac)
+        coords = torch.stack(torch.meshgrid(
+            torch.linspace(img_h//2 - dH, img_h//2 + dH - 1, 2*dH),
+            torch.linspace(img_w//2 - dW, img_w//2 + dW - 1, 2*dW)), -1)
+
+    else:
+        coords = torch.stack(torch.meshgrid(
+            torch.linspace(0, img_h - 1, img_h),
+            torch.linspace(0, img_w - 1, img_w)), -1)
     coords = torch.reshape(coords, [-1, 2])  # [ HxW , 2 ]
 
     # 640000 개 중 1024개 뽑기

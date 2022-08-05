@@ -31,8 +31,8 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "0805_1_lego"
-  start_iter: 50000
+  name: "0805_2_lego"
+  start_iter: 0
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
@@ -41,9 +41,12 @@ training:
   idx_video: 200000
   idx_visdom: 100
 
+  precrop_iters : 2000
+  precrop_frac : .5
+
 testing:
-  name: "0805_1_lego"
-  test_iter: 50000
+  name: "0805_2_lego"
+  test_iter: 200000
   mode_test : True
   mode_render : True
   n_angle: 120

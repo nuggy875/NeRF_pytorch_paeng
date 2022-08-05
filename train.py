@@ -65,11 +65,11 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
                       'optimizer_state_dict': optimizer.state_dict()}
         # ====  Print LOG  ====
         if i % cfg.training.idx_print == 0:
-            print('i : {} , Loss_C : {} , Loss_F : {} , Total_Loss : {} , PSNR_C : {} , PSNR_F : {} , PSNR : {}'.format(
-                i, loss_c, loss_f, loss, psnr_c, psnr_f, psnr))
+            print('i : {} , Loss_C : {} , Loss_F : {} , Total_Loss : {} , PSNR_C : {} , PSNR_F : {}'.format(
+                i, loss_c, loss_f, loss, psnr_c, psnr_f))
 
         if i % cfg.training.idx_visdom == 0 and vis is not None:
-            vis.line(X=torch.ones((1, 6)).cpu() * i,
+            vis.line(X=torch.ones((1, 5)).cpu() * i,
                      Y=torch.Tensor(
                          [loss_c, loss_f, loss, psnr_c, psnr_f, psnr]).unsqueeze(0).cpu(),
                      win='loss_psnr_{}'.format(cfg.training.name),
@@ -78,7 +78,7 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
                                ylabel='loss_psnr',
                                title='LOSS&PSNR for {}'.format(
                                    cfg.training.name),
-                               legend=['LOSS_Coarse', 'LOSS_Fine', 'LOSS_Total', 'PSNR_Coarse', 'PSNR_Fine', 'PSNR']))
+                               legend=['LOSS_Coarse', 'LOSS_Fine', 'LOSS_Total', 'PSNR_Coarse', 'PSNR_Fine']))
 
     else:
         checkpoint = {'idx': i,

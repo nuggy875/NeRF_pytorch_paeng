@@ -12,8 +12,6 @@ from tqdm import tqdm, trange
 
 from dataset import load_blender, load_custom
 from model import NeRF, get_positional_encoder
-from process import run_model_batchify, get_rays, preprocess_rays, sample_rays_and_pixel, batchify_rays_and_render_by_chunk
-from utils import img2mse, mse2psnr, saveNumpyImage
 
 from train import train_each_iters
 from test import test, render
