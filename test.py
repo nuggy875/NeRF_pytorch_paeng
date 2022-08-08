@@ -42,15 +42,15 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
             rays_o, rays_d = get_rays(
                 img_w, img_h, img_k, test_pose[:3][:4])  # [1]
             rays = preprocess_rays(rays_o, rays_d, cfg)  # [3]
-            pred_rgb, pred_disp, pred_acc, predextras = run_model_batchify(rays=rays,
-                                                                           fn_posenc=fn_posenc,
-                                                                           fn_posenc_d=fn_posenc_d,
-                                                                           model=model,
-                                                                           model_fine=model_fine,
-                                                                           cfg=cfg)
+            ret = run_model_batchify(rays=rays,
+                                     fn_posenc=fn_posenc,
+                                     fn_posenc_d=fn_posenc_d,
+                                     model=model,
+                                     model_fine=model_fine,
+                                     cfg=cfg)
             # SAVE test image
-            rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
-            disp = torch.reshape(pred_disp, [img_h, img_w])
+            rgb = torch.reshape(ret['rgb_map'], [img_h, img_w, 3])
+            disp = torch.reshape(ret['disp_map'], [img_h, img_w])
             rgb_np = rgb.cpu().numpy()
             disp_np = disp.cpu().numpy()
 
@@ -61,7 +61,7 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
             # GET loss & psnr
             target_img_flat = torch.reshape(test_imgs[i], [-1, 3])
             # >> GET PSNR
-            img_loss = img2mse(pred_rgb, target_img_flat)
+            img_loss = img2mse(ret['rgb_map'], target_img_flat)
             loss = img_loss
             psnr = mse2psnr(img_loss)
 
@@ -100,7 +100,7 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
         result_best['ssim'] = perform_SSIM[i] if result_best['ssim'] < perform_SSIM[i] else result_best['ssim']
         result_best['lpips'] = perform_LPIPS[i] if result_best['lpips'] > perform_LPIPS[i] else result_best['lpips']
         f.write(line)
-    f.write('Best Value ) PSNR : {}\tSSIM : {}\tLPIPS : {}'.format(
+    f.write('\nBest Value ) PSNR : {}\tSSIM : {}\tLPIPS : {}\n'.format(
         result_best['psnr'], result_best['ssim'], result_best['lpips']))
     f.write('Mean Value ) PSNR : {}\tSSIM : {}\tLPIPS : {}'.format(
         result_sum['psnr']/len(losses), result_sum['ssim']/len(losses), result_sum['lpips']/len(losses)))
@@ -141,17 +141,17 @@ def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_a
             rays_o, rays_d = get_rays(
                 img_w, img_h, img_k, test_pose[:3][:4])  # [1]
             rays = preprocess_rays(rays_o, rays_d, cfg)  # [3]
-            pred_rgb, pred_disp, pred_acc, predextras = run_model_batchify(rays=rays,
-                                                                           fn_posenc=fn_posenc,
-                                                                           fn_posenc_d=fn_posenc_d,
-                                                                           model=model,
-                                                                           model_fine=model_fine,
-                                                                           cfg=cfg)
+            ret = run_model_batchify(rays=rays,
+                                     fn_posenc=fn_posenc,
+                                     fn_posenc_d=fn_posenc_d,
+                                     model=model,
+                                     model_fine=model_fine,
+                                     cfg=cfg)
             # save test image
-            rgb = torch.reshape(pred_rgb, [img_h, img_w, 3])
-            disp = torch.reshape(pred_disp, [img_h, img_w])
-            acc = torch.reshape(pred_acc, [img_h, img_w])
-            depth = torch.reshape(predextras['depth_map'], [img_h, img_w])
+            rgb = torch.reshape(ret['rgb_map'], [img_h, img_w, 3])
+            disp = torch.reshape(ret['disp_map'], [img_h, img_w])
+            acc = torch.reshape(ret['acc_map'], [img_h, img_w])
+            depth = torch.reshape(ret['depth_map'], [img_h, img_w])
 
             rgb_np = rgb.cpu().numpy()
             disp_np = disp.cpu().numpy()
@@ -172,14 +172,16 @@ def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_a
         disps = np.stack(disps, 0)
 
     if single_angle == -1:
-        imageio.mimwrite(os.path.join(save_render_dir, "rgb.mp4"),
-                         to8b(rgbs), fps=30, quality=8)
+        # imageio.mimwrite(os.path.join(save_render_dir, "rgb.mp4"),
+        #                  to8b(rgbs), fps=30, quality=8)
         imageio.mimwrite(os.path.join(save_render_dir, "rgb.gif"),
                          to8b(rgbs), duration=0.04)
-        imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
-                         to8b(disps / np.max(disps)), fps=30, quality=8)
-        imageio.mimwrite(os.path.join(save_render_dir, "depth.mp4"),
-                         to8b(depths), fps=30, quality=8)
+        # imageio.mimwrite(os.path.join(save_render_dir, "disp.mp4"),
+        #                  to8b(disps / np.max(disps)), fps=30, quality=8)
+        imageio.mimwrite(os.path.join(save_render_dir, "disp.gif"),
+                         to8b(disps / np.max(disps)), duration=0.04)
+        # imageio.mimwrite(os.path.join(save_render_dir, "depth.mp4"),
+        #                  to8b(depths), fps=30, quality=8)
 
 
 @hydra.main(config_path=CONFIG_DIR, config_name=DATA_NAME)
@@ -216,7 +218,6 @@ def main(cfg: DictConfig):
 
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
-    # output_ch = 5 if cfg.model.n_importance > 0 else 4
     skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)

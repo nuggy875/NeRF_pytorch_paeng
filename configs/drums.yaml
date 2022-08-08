@@ -6,7 +6,7 @@ device:
   gpu_ids:
     - 0
     - 1
-  rank: 1
+  rank: 0
 
 data:
   name: "drums"
@@ -29,22 +29,26 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "0804_2_drums"
+  name: "0806_1_drums"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
   idx_print: 1000
-  idx_save: 50000
+  idx_save: 100000
   idx_test: 200000
-  idx_video: 100000
+  idx_video: 200000
   idx_visdom: 100
 
+  precrop_iters : 2000
+  precrop_frac : .5
+
+
 testing:
-  name: "0804_2_drums"
+  name: "0806_1_drums"
   test_iter: 200000
-  mode_test : False
+  mode_test : True
   mode_render : True
-  n_angle: 40
+  n_angle: 120
   single_angle : -1
   phi: -30.0
   testskip: 1

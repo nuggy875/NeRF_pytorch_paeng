@@ -39,6 +39,10 @@ training:
   idx_video: 100000
   idx_visdom: 100
 
+  precrop_iters : 2000
+  precrop_frac : .5
+
+
 testing:
   name: "0803_2_ficus"
   test_iter: 100000

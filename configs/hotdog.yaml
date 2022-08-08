@@ -39,6 +39,10 @@ training:
   idx_video: 50000
   idx_visdom: 100
 
+  precrop_iters : 2000
+  precrop_frac : .5
+
+
 testing:
   name: "hotdog_0728_2"
   test_iter: 200000

@@ -56,11 +56,12 @@ def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, model_fine, cfg):
             if k not in all_ret:
                 all_ret[k] = []
             all_ret[k].append(ret[k])
-    all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}
-    k_extract = ['rgb_map', 'disp_map', 'acc_map']
-    ret_list = [all_ret[k] for k in k_extract]
-    ret_dict = {k: all_ret[k] for k in all_ret if k not in k_extract}
-    return ret_list + [ret_dict]
+    all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}        # FIXME
+    return all_ret
+    # k_extract = ['rgb_map', 'disp_map', 'acc_map']
+    # ret_list = [all_ret[k] for k in k_extract]
+    # ret_dict = {k: all_ret[k] for k in all_ret if k not in k_extract}
+    # return ret_list + [ret_dict]
 
 
 def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
@@ -133,9 +134,12 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
         rgb_map, disp_map, acc_map, weights, depth_map = volumne_rendering(
             outputs, z_vals_fine, rays_d)
 
-    ret = {'rgb_map': rgb_map, 'disp_map': disp_map,
-           'acc_map': acc_map, 'raw': outputs, 'depth_map': depth_map, 'rgb_map_c': rgb_map_c}
-    return ret
+        return {'rgb_map': rgb_map, 'disp_map': disp_map,
+                'acc_map': acc_map, 'raw': outputs, 'depth_map': depth_map,
+                'rgb_map_c': rgb_map_c, 'disp_map_c': disp_map_c}
+    else:
+        return {'rgb_map': rgb_map, 'disp_map': disp_map,
+                'acc_map': acc_map, 'raw': outputs, 'depth_map': depth_map}
 
 
 def make_input(rays_o, rays_d, z_vals, viewdirs, fn_posenc, fn_posenc_d):

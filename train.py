@@ -28,12 +28,12 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
     rays = preprocess_rays(rays_o, rays_d, cfg)
 
     # [4] Run Model         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    pred_rgb, disp, acc, extras = run_model_batchify(rays=rays,
-                                                     fn_posenc=fn_posenc,
-                                                     fn_posenc_d=fn_posenc_d,
-                                                     model=model,
-                                                     model_fine=model_fine,
-                                                     cfg=cfg)
+    ret = run_model_batchify(rays=rays,
+                             fn_posenc=fn_posenc,
+                             fn_posenc_d=fn_posenc_d,
+                             model=model,
+                             model_fine=model_fine,
+                             cfg=cfg)
 
     # assign target_img
     target_img_s = target_img_s.to(
@@ -41,10 +41,10 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
 
     optimizer.zero_grad()
 
-    loss = img2mse(target_img_s, pred_rgb)
+    loss = img2mse(target_img_s, ret['rgb_map'])
 
     if cfg.render.n_fine_pts_per_ray > 0:
-        loss_c = img2mse(target_img_s, extras['rgb_map_c'])
+        loss_c = img2mse(target_img_s, ret['rgb_map_c'])
         loss_f = loss
         psnr_c = mse2psnr(loss_c)
         psnr_f = mse2psnr(loss_f)
@@ -71,7 +71,7 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
         if i % cfg.training.idx_visdom == 0 and vis is not None:
             vis.line(X=torch.ones((1, 5)).cpu() * i,
                      Y=torch.Tensor(
-                         [loss_c, loss_f, loss, psnr_c, psnr_f, psnr]).unsqueeze(0).cpu(),
+                         [loss_c, loss_f, loss, psnr_c, psnr_f]).unsqueeze(0).cpu(),
                      win='loss_psnr_{}'.format(cfg.training.name),
                      update='append',
                      opts=dict(xlabel='iteration',
@@ -105,11 +105,19 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
             save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
 
     # == GET Best result for training ==
-    if result_best['psnr'] < psnr:
-        result_best['i'] = i
-        result_best['loss'] = loss
-        result_best['psnr'] = psnr
-        torch.save(checkpoint, os.path.join(
-            save_path, cfg.training.name + '_best.pth.tar'))
+    if cfg.render.n_fine_pts_per_ray > 0:
+        if result_best['psnr'] < psnr_f:
+            result_best['i'] = i
+            result_best['loss'] = loss
+            result_best['psnr'] = psnr_f
+            torch.save(checkpoint, os.path.join(
+                save_path, cfg.training.name + '_best.pth.tar'))
+    else:
+        if result_best['psnr'] < psnr:
+            result_best['i'] = i
+            result_best['loss'] = loss
+            result_best['psnr'] = psnr
+            torch.save(checkpoint, os.path.join(
+                save_path, cfg.training.name + '_best.pth.tar'))
 
     return result_best
