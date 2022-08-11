@@ -6,7 +6,7 @@ device:
   gpu_ids:
     - 0
     - 1
-  rank: 0
+  rank: 1
 
 data:
   name: "lego"
@@ -31,7 +31,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: "0808_1_lego"
+  name: "0810_2_lego"
   start_iter: 0
   N_iters: 200000
   lr: 5e-4
@@ -41,11 +41,11 @@ training:
   idx_video: 200000
   idx_visdom: 100
 
-  precrop_iters : 1000
+  precrop_iters : 500
   precrop_frac : .5
 
 testing:
-  name: "0808_1_lego"
+  name: "0810_2_lego"
   test_iter: 200000
   mode_test : True
   mode_render : True

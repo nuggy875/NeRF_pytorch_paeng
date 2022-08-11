@@ -185,10 +185,10 @@ def volumne_rendering(outputs, z_vals, rays_d):
     return rgb_map, disp_map, acc_map, weights, depth_map
 
 
-def sample_rays_and_pixel(rays_o, rays_d, target_img, cfg):
+def sample_rays_and_pixel(i, rays_o, rays_d, target_img, cfg):
     img_w, img_h = target_img.size()[:2]
 
-    if cfg.training.precrop_iters > 0:
+    if i < cfg.training.precrop_iters:
         dH = int(img_h//2 * cfg.training.precrop_frac)
         dW = int(img_w//2 * cfg.training.precrop_frac)
         coords = torch.stack(torch.meshgrid(

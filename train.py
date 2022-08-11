@@ -22,7 +22,7 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
     # [2] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # HxW 의 Pixel 중에서 n_rays_per_image(1024)개의 랜덤 샘플링
     rays_o, rays_d, target_img_s = sample_rays_and_pixel(
-        rays_o, rays_d, target_img, cfg)
+        i, rays_o, rays_d, target_img, cfg)
 
     # [3] Preprocess Rays   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     rays = preprocess_rays(rays_o, rays_d, cfg)
