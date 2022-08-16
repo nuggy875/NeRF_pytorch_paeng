@@ -23,11 +23,12 @@ np.random.seed(0)
 
 @hydra.main(config_path=CONFIG_DIR, config_name=DATA_NAME)
 def main(cfg: DictConfig):
-    # == visdom ==
-    if cfg.visualization.visdom:
-        vis = visdom.Visdom(port=cfg.visualization.visdom_port)
-    else:
-        vis = None
+    # == 0. Setting ==
+    # = visdom =
+    vis = visdom.Visdom(port=cfg.visualization.visdom_port) if cfg.visualization.visdom else None
+    # = Set Device =
+    device = torch.device('cuda:{}'.format(
+        cfg.device.gpu_ids[cfg.device.rank]))
 
     # == 1. LOAD DATASET (blender) ==
     if cfg.data.type == 'blender':
@@ -39,7 +40,6 @@ def main(cfg: DictConfig):
             reduce_res=cfg.data.reduce_res)
         i_train, i_val, i_test = i_split
         img_h, img_w, img_k = hwk
-
     elif cfg.data.type == 'custom':
         images, poses, hwk, i_split = load_custom(
             data_root=cfg.data.root,
@@ -52,16 +52,12 @@ def main(cfg: DictConfig):
         i_test = []
         img_h, img_w, img_k = hwk
 
-    device = torch.device('cuda:{}'.format(
-        cfg.device.gpu_ids[cfg.device.rank]))
-
     # == 2. POSITIONAL ENCODING - Define Function ==
     fn_posenc, input_ch = get_positional_encoder(L=10)
     fn_posenc_d, input_ch_d = get_positional_encoder(L=4)
 
-    skips = [4]
-
     # == 3-1. DEFINE MODEL (NeRF) ==
+    skips = [4]
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
     grad_vars = list(model.parameters())

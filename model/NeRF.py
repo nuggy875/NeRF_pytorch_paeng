@@ -27,7 +27,6 @@ class NeRF(nn.Module):
         self.linear_color = nn.Linear(W//2 ,3)
         # self.linear_output = nn.Linear(W, output_ch)    # Input 값에 Direction 안 쓸때 사용 (5D -> 3D)
 
-
     def forward(self, x):
         input_x, input_d = torch.split(x, [self.input_ch_x, self.input_ch_d], dim=-1)
         out = input_x
@@ -48,6 +47,19 @@ class NeRF(nn.Module):
         out = self.linear_color(out)
         result = torch.cat([out, density], dim=-1)
         return result
+
+
+class NeRF_(nn.Module):
+    def __init__(self, D:int, W:int, input_ch: int, input_ch_d: int, skips = [4]):
+        super().__init__()
+        self.model_coarse = NeRFModule(D, W, input_ch, input_ch_d, skips)
+        self.model_fine = NeRFModule(D, W, input_ch, input_ch_d, skips)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+
 
 
 if __name__ == "__main__":
