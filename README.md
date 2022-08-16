@@ -6,7 +6,7 @@ Pytorch Implementation of [NeRF](http://www.matthewtancik.com/nerf) (Neural Radi
 
 ```
 conda env create -f environment.yml
-conda activate nerf_paeng
+conda activate nerf
 ```
 ---
 ## Dataset
@@ -21,8 +21,6 @@ Download more dataset from link below
 https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1
 
 synthetic datasets : [chair, drums, ficus, hotdog, lego, materials, mic, ship]
-
-custom datasets : [minions, ]
 
 ---
 ## Training

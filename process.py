@@ -40,7 +40,7 @@ def preprocess_rays(rays_o, rays_d, cfg):
     return rays
 
 
-def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, model_fine, cfg):
+def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, cfg):
     '''
     chunk_ray : sample 된 ray 개수가 많을 때 cuda memory 이슈가 있기 때문에 chunk로 batchify하여 학습합니다.
                 특히 test 할때는 ray의 개수가 이미지 전체이기 때문에 (ex 400x400) batchify가 필요.
@@ -51,7 +51,7 @@ def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, model_fine, cfg):
     all_ret = {}
     for i in range(0, rays.shape[0], chunk):
         ret = run_model(rays[i:i+chunk], fn_posenc,
-                        fn_posenc_d, model, model_fine, cfg)
+                        fn_posenc_d, model, cfg)
         for k in ret:
             if k not in all_ret:
                 all_ret[k] = []
@@ -64,7 +64,7 @@ def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, model_fine, cfg):
     # return ret_list + [ret_dict]
 
 
-def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
+def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
     '''
     chunk_pts : input(rays x pts_per_ray)이 너무 큰 경우 chunk_pts를 기준으로 batchify 하여 model에 넣습니다.
     '''
@@ -99,7 +99,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
 
     # ===== 1-3) Run Network (COARSE NETWORK) =====
     chunk = cfg.render.chunk_pts
-    outputs_flat = torch.cat([model(embedded[i:i+chunk])
+    outputs_flat = torch.cat([model(embedded[i:i+chunk], is_fine=False)
                              for i in range(0, embedded.shape[0], chunk)], 0)
     outputs = torch.reshape(outputs_flat, list(
         z_vals.shape) + [outputs_flat.shape[-1]])  # [1024, 64, 4]
@@ -126,7 +126,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, model_fine, cfg):
         embedded_fine = embedded_fine.to(device)
         # ===== 2-3) Run Network (FINE NETWORK) =====
         chunk = cfg.render.chunk_pts
-        outputs_flat = torch.cat([model_fine(embedded_fine[i:i+chunk])
+        outputs_flat = torch.cat([model(embedded_fine[i:i+chunk], is_fine=True)
                                   for i in range(0, embedded_fine.shape[0], chunk)], 0)
         outputs = torch.reshape(outputs_flat, list(
             z_vals_fine.shape) + [outputs_flat.shape[-1]])  # [1024, 192, 4]

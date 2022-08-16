@@ -4,13 +4,13 @@ import torch.nn.functional as F
 import numpy as np
 
 
-class NeRF(nn.Module):
+class NeRFModule(nn.Module):
     def __init__(self, D: int, W: int, input_ch: int, input_ch_d: int, skips = [4]):
-        super(NeRF, self).__init__()
+        super(NeRFModule, self).__init__()
         """
         D : Layers in Network (8)  ||  W : Channels per Layer (256)
         input_ch : input from pos_enc (x,y,z)  ||  input_ch_d : input from pos_enc (d)
-        output_ch : 5 ?   ||   skips : [4] ? 
+        output_ch : 5 ?   ||   skips : [4]
         """
         self.D = D
         self.W = W
@@ -25,7 +25,6 @@ class NeRF(nn.Module):
         self.linear_feat = nn.Linear(W, W)
         self.linear_density = nn.Linear(W, 1)
         self.linear_color = nn.Linear(W//2 ,3)
-        # self.linear_output = nn.Linear(W, output_ch)    # Input 값에 Direction 안 쓸때 사용 (5D -> 3D)
 
     def forward(self, x):
         input_x, input_d = torch.split(x, [self.input_ch_x, self.input_ch_d], dim=-1)
@@ -49,7 +48,7 @@ class NeRF(nn.Module):
         return result
 
 
-class NeRF_(nn.Module):
+class NeRF(nn.Module):
     def __init__(self, D:int, W:int, input_ch: int, input_ch_d: int, skips = [4]):
         super().__init__()
         self.model_coarse = NeRFModule(D, W, input_ch, input_ch_d, skips)
@@ -59,6 +58,17 @@ class NeRF_(nn.Module):
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
+    
+    def forward(self, x, is_fine:bool = False):
+        '''
+        Coarse Network : is_fine=False,
+        Fine Network : is_fine=True
+        '''
+        if is_fine:
+            return self.model_coarse(x)
+        else:
+            return self.model_fine(x)
+
 
 
 

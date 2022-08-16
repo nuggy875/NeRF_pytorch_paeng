@@ -1,5 +1,5 @@
 # run: conda env create -f environment.yml
-name: paeng
+name: nerf
 channels:
   - pytorch
   - defaults

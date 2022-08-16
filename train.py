@@ -7,7 +7,7 @@ from utils import mse2psnr, img2mse
 from process import sample_rays_and_pixel, get_rays, preprocess_rays, run_model_batchify
 
 
-def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posenc, fn_posenc_d, vis, optimizer,
+def train_each_iters(i, i_train, images, poses, hwk, model, criterion, fn_posenc, fn_posenc_d, vis, optimizer,
                      result_best, cfg):
 
     img_h, img_w, img_k = hwk
@@ -32,7 +32,6 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
                              fn_posenc=fn_posenc,
                              fn_posenc_d=fn_posenc_d,
                              model=model,
-                             model_fine=model_fine,
                              cfg=cfg)
 
     # assign target_img
@@ -41,14 +40,15 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
 
     optimizer.zero_grad()
 
-    loss = img2mse(target_img_s, ret['rgb_map'])
+    # loss = img2mse(target_img_s, ret['rgb_map'])
+    loss = criterion(target_img_s, ret['rgb_map'])
 
     if cfg.render.n_fine_pts_per_ray > 0:
-        loss_c = img2mse(target_img_s, ret['rgb_map_c'])
-        loss_f = loss
+        loss_c = loss
+        loss_f = criterion(target_img_s, ret['rgb_map_c'])
         psnr_c = mse2psnr(loss_c)
         psnr_f = mse2psnr(loss_f)
-        loss = loss_f + loss_c
+        loss = loss_c + loss_f
 
     psnr = mse2psnr(loss)
 
@@ -61,7 +61,6 @@ def train_each_iters(i, i_train, images, poses, hwk, model, model_fine, fn_posen
     if cfg.render.n_fine_pts_per_ray > 0:
         checkpoint = {'idx': i,
                       'model_state_dict': model.state_dict(),
-                      'model_fine_state_dict': model_fine.state_dict(),
                       'optimizer_state_dict': optimizer.state_dict()}
         # ====  Print LOG  ====
         if i % cfg.training.idx_print == 0:

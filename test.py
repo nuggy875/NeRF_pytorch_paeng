@@ -16,15 +16,12 @@ from utils import getSSIM, getLPIPS, img2mse, mse2psnr, to8b, saveNumpyImage
 from configs.config import CONFIG_DIR, LOG_DIR, DATA_NAME
 
 
-def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, hwk, cfg, vis=None):
+def test(idx, fn_posenc, fn_posenc_d, model, test_imgs, test_poses, hwk, cfg, vis=None):
     print('>>> Start Testing for idx'.format(idx))
     model.eval()
     checkpoint = torch.load(os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
-    if cfg.render.n_fine_pts_per_ray > 0:
-        model_fine.eval()
-        model_fine.load_state_dict(checkpoint['model_fine_state_dict'])
 
     save_test_dir = os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}'.format(idx), 'test_result')
@@ -46,7 +43,6 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
                                      fn_posenc=fn_posenc,
                                      fn_posenc_d=fn_posenc_d,
                                      model=model,
-                                     model_fine=model_fine,
                                      cfg=cfg)
             # SAVE test image
             rgb = torch.reshape(ret['rgb_map'], [img_h, img_w, 3])
@@ -107,7 +103,7 @@ def test(idx, fn_posenc, fn_posenc_d, model, model_fine, test_imgs, test_poses, 
     f.close()
 
 
-def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_angle=40, single_angle=-1):
+def render(idx, fn_posenc, fn_posenc_d, model, hwk, cfg, device, n_angle=40, single_angle=-1):
     '''
     default ) n_angle : 40 / single_angle = -1
     if single_angle is not -1 , it would result single rendering image.
@@ -121,9 +117,6 @@ def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_a
     checkpoint = torch.load(os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}.pth.tar'.format(idx)))
     model.load_state_dict(checkpoint['model_state_dict'])
-    if cfg.render.n_fine_pts_per_ray > 0:
-        model_fine.eval()
-        model_fine.load_state_dict(checkpoint['model_fine_state_dict'])
 
     save_render_dir = os.path.join(
         LOG_DIR, cfg.testing.name, cfg.testing.name+'_{}'.format(idx), 'render_result')
@@ -145,7 +138,6 @@ def render(idx, fn_posenc, fn_posenc_d, model, model_fine, hwk, cfg, device, n_a
                                      fn_posenc=fn_posenc,
                                      fn_posenc_d=fn_posenc_d,
                                      model=model,
-                                     model_fine=model_fine,
                                      cfg=cfg)
             # save test image
             rgb = torch.reshape(ret['rgb_map'], [img_h, img_w, 3])
@@ -222,17 +214,12 @@ def main(cfg: DictConfig):
     model = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
                  input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
 
-    model_fine = None
-    if cfg.render.n_fine_pts_per_ray > 0:
-        model_fine = NeRF(D=cfg.model.netDepth, W=cfg.model.netWidth,
-                          input_ch=input_ch, input_ch_d=input_ch_d, skips=skips).to(device)
 
     if cfg.testing.mode_test:
         test(idx=cfg.testing.test_iter,
              fn_posenc=fn_posenc,
              fn_posenc_d=fn_posenc_d,
              model=model,
-             model_fine=model_fine,
              test_imgs=torch.Tensor(images[i_test]).to(device),
              test_poses=torch.Tensor(poses[i_test]).to(device),
              hwk=hwk,
@@ -243,7 +230,6 @@ def main(cfg: DictConfig):
                fn_posenc=fn_posenc,
                fn_posenc_d=fn_posenc_d,
                model=model,
-               model_fine=model_fine,
                hwk=hwk,
                cfg=cfg,
                device=device,
