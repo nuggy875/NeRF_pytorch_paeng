@@ -10,7 +10,7 @@ device:
 
 data:
   name: "ficus"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/ficus"
+  root: "/home/brozserver3/brozdisk/data/nerf/nerf_synthetic/ficus"
   type: "blender"
   white_bkgd: True
   reduce_res: 0.

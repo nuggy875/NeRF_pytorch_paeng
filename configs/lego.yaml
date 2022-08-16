@@ -6,12 +6,11 @@ device:
   gpu_ids:
     - 0
     - 1
-  rank: 1
+  rank: 0
 
 data:
   name: "lego"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
-  root_p: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego"
+  root: "/home/brozserver3/brozdisk/data/nerf/nerf_synthetic/lego"
   root_sm: 'C:\Users\csm81\Desktop\nerf\nerf_pytorch_\data\nerf_synthetic\lego'
   type: "blender"
   white_bkgd: True

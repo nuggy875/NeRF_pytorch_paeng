@@ -10,7 +10,7 @@ device:
 
 data:
   name: "materials"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/materials"
+  root: "/home/brozserver3/brozdisk/data/nerf/nerf_synthetic/materials"
   type: "blender"
   white_bkgd: True
   reduce_res: 0.

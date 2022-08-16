@@ -10,7 +10,7 @@ device:
 
 data:
   name: "chair"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/chair"
+  root: "/home/brozserver3/brozdisk/data/nerf/nerf_synthetic/chair"
   type: "blender"
   white_bkgd: True
   reduce_res: 0.

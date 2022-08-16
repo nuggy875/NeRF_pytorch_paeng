@@ -10,7 +10,7 @@ device:
 
 data:
   name: "mic"
-  root: "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/mic"
+  root: "/home/brozserver3/brozdisk/data/nerf/nerf_synthetic/mic"
   type: "blender"
   white_bkgd: True
   reduce_res: 0.

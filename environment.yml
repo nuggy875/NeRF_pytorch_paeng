@@ -1,5 +1,5 @@
 # run: conda env create -f environment.yml
-name: nerf_paeng
+name: paeng
 channels:
   - pytorch
   - defaults
@@ -31,5 +31,4 @@ dependencies:
       - IQA_pytorch
   - pytorch
   - torchvision
-  - cudatoolkit
   - tqdm

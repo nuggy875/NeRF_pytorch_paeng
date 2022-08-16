@@ -4,7 +4,7 @@ visualization:
 
 data:
   name: "minions"
-  root: "/home/brozserver2/brozdisk/data/nerf/custom/minions"
+  root: "/home/brozserver3/brozdisk/data/nerf/custom/minions"
   type: "custom"
   white_bkgd: False
   reduce_res: 4.
