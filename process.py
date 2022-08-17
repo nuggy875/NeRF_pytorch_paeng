@@ -56,12 +56,8 @@ def run_model_batchify(rays, fn_posenc, fn_posenc_d, model, cfg):
             if k not in all_ret:
                 all_ret[k] = []
             all_ret[k].append(ret[k])
-    all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}        # FIXME
+    all_ret = {k: torch.cat(all_ret[k], 0) for k in all_ret}
     return all_ret
-    # k_extract = ['rgb_map', 'disp_map', 'acc_map']
-    # ret_list = [all_ret[k] for k in k_extract]
-    # ret_dict = {k: all_ret[k] for k in all_ret if k not in k_extract}
-    # return ret_list + [ret_dict]
 
 
 def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
@@ -103,8 +99,7 @@ def run_model(ray_batch, fn_posenc, fn_posenc_d, model, cfg):
                              for i in range(0, embedded.shape[0], chunk)], 0)
     outputs = torch.reshape(outputs_flat, list(
         z_vals.shape) + [outputs_flat.shape[-1]])  # [1024, 64, 4]
-    # FIXME outputs = torch.reshape(outputs_flat, list(
-    #     input_pts.shape[:-1]) + [outputs_flat.shape[-1]])  # [1024, 64, 4]
+
     # ===== 1-4) Volume Rendering (COARSE NETWORK) =====
     rgb_map, disp_map, acc_map, weights, depth_map = volumne_rendering(
         outputs, z_vals, rays_d)
