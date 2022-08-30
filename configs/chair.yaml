@@ -1,6 +1,6 @@
 visualization:
   visdom: True
-  visdom_port: '8900'
+  visdom_port: "8900"
 
 device:
   gpu_ids:
@@ -9,9 +9,9 @@ device:
   rank: 0
 
 data:
-  name: 'chair'
-  root: '/home/brozserver3/brozdisk/data/nerf/nerf_synthetic/chair'
-  type: 'blender'
+  name: "chair"
+  root: "[root]/chair"
+  type: "blender"
   white_bkgd: True
   reduce_res: 0.
 
@@ -29,7 +29,7 @@ render:
   chunk_pts: 65536
 
 training:
-  name: '0806_1_chair'
+  name: "train_chair"
   start_iter: 0
   N_iters: 300000
   warmup_iter: 10000
@@ -46,7 +46,7 @@ training:
   precrop_frac: .5
 
 testing:
-  name: '0806_1_chair'
+  name: "train_chair"
   test_iter: 200000
   mode_test: True
   mode_render: True
