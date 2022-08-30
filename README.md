@@ -127,26 +127,45 @@ cuDNN : v8.0.5
 
 ## • Render Results
 
-<img src="./figures/chair_rgb.gif" width="40%" height="40%">
-<img src="./figures/chair_disp.gif" width="40%" height="40%">
-
-<img src="./figures/drums_rgb.gif" width="40%" height="40%">
-<img src="./figures/drums_disp.gif" width="40%" height="40%">
-
-<img src="./figures/ficus_rgb.gif" width="40%" height="40%">
-<img src="./figures/ficus_disp.gif" width="40%" height="40%">
-
-<img src="./figures/hotdog_rgb.gif" width="40%" height="40%">
-<img src="./figures/hotdog_disp.gif" width="40%" height="40%">
-
-<img src="./figures/lego_rgb.gif" width="40%" height="40%">
-<img src="./figures/lego_disp.gif" width="40%" height="40%">
-
-<img src="./figures/materials_rgb.gif" width="40%" height="40%">
-<img src="./figures/materials_disp.gif" width="40%" height="40%">
-
-<img src="./figures/mic_rgb.gif" width="40%" height="40%">
-<img src="./figures/mic_disp.gif" width="40%" height="40%">
-
-<img src="./figures/ship_rgb.gif" width="40%" height="40%">
-<img src="./figures/ship_disp.gif" width="40%" height="40%">
+<table>
+      <thead>
+      <tr>
+            <th width="500px">Render RGB</th>
+            <th width="500px">Render DISP</th>
+      </tr>
+      </thead>
+      <tbody>
+            <tr width="500px">
+                  <td><img src="./figures/chair_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/chair_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/drums_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/drums_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/ficus_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/ficus_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/hotdog_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/hotdog_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/lego_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/lego_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/materials_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/materials_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/mic_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/mic_disp.gif" width="100%" height="100%"></td>
+            </tr>
+            <tr width="500px">
+                  <td><img src="./figures/ship_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/ship_disp.gif" width="100%" height="100%"></td>
+            </tr>
+      </tbody>
+</table>
