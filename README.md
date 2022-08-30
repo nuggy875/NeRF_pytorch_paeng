@@ -1,4 +1,4 @@
-# NeRF Pytorch
+# NeRF in Pytorch
 
 Pytorch Re-Implementation of [NeRF](http://www.matthewtancik.com/nerf) (Neural Radiance Fields)
 
