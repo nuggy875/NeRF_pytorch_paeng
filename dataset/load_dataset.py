@@ -161,12 +161,7 @@ def load_blender(data_root: str, data_name: str, testskip: int = 8, bkg_white: b
 
 
 if __name__ == "__main__":
-    # i, p, hwf, i = load_blender(
-    #     "/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender", False)
-    img, p, hwf, i = load_custom(
-        data_root="/home/brozserver2/brozdisk/data/nerf/custom/minions",
-        data_name="minions",
-        bkg_white=False,
-        reduce_res=4.)
+    img, p, hwf, i = load_blender(
+        "/home/root/data/nerf_synthetic/lego", "blender", False)
 
     saveNumpyImage(img[0], "minions_reduced")         # Save Image for testing

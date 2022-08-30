@@ -15,10 +15,8 @@ from load_dataset import load_blender, load_custom
 
 
 def show_3d(data_root: str, data_name: str):
-    # img, pose, hwf, i_split = load_blender(
-    #     data_root, data_name, False)
-    img, pose, hwf, i_split = load_custom(
-        data_root, data_name, False, bkg_white=False, reduce_res=0.)
+    img, pose, hwf, i_split = load_blender(
+        data_root, data_name, False)
 
     test_img = img[0]
     test_pose = pose[0]
@@ -61,8 +59,4 @@ def show_3d(data_root: str, data_name: str):
 
 if __name__ == "__main__":
 
-    # anim = animation.FuncAnimation(fig, animate, init_func=init, frames=360, interval=20, blit=True)
-    # anim.save('dataset/anim_test.gif')
-
-    # show_3d("/home/brozserver2/dev/NeRF_paeng/data/nerf_synthetic/lego", "blender")
-    show_3d("/home/brozserver2/brozdisk/data/nerf/custom/minions", "custom")
+    show_3d("/home/root/data/nerf_synthetic/lego", "blender")

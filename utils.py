@@ -42,8 +42,3 @@ def saveNumpyImage(img, filename: str):
 def put_epsilon(map): return torch.max(1e-10 * torch.ones_like(map), map)
 
 
-if __name__ == "__main__":
-    img = Image.open(
-        "/home/brozserver2/brozdisk/data/nerf/nerf_synthetic/lego/train/r_0.png").convert("RGB")
-    img_tensor = transforms.ToTensor()(img)
-    print(img_tensor.shape)
