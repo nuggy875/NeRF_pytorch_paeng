@@ -4,3 +4,5 @@ data/*
 logs/*
 ./idea
 .vscode
+_exp/*
+
