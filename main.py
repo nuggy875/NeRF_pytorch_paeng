@@ -59,7 +59,8 @@ def main_worker(rank, opts):
     i_train, i_val, i_test = i_split
     img_h, img_w = hw
     (gt_intrinsic, gt_extrinsic) = gt_camera_param
-    print(f"\n>> Dataset Loaded Completely!\n---- Image shape (N, H, W, 3) : {images.shape}")
+    print(
+        f"\n>> Dataset Loaded Completely!\n---- Image shape (N, H, W, 3) : {images.shape}")
 
     # ====  2. Model  ====
     # >> Positional Encoding
@@ -67,10 +68,10 @@ def main_worker(rank, opts):
     fn_posenc_d, input_ch_d = get_positional_encoder(opts.L_d)
     # >> DEFINE MODEL (NeRF) ==
     model = NeRF(D=opts.netDepth, W=opts.netWidth,
-                input_ch=input_ch, input_ch_d=input_ch_d,
-                skips=[4], gt_camera_param = (gt_intrinsic, gt_extrinsic),
-                device=device).to(device)
-    
+                 input_ch=input_ch, input_ch_d=input_ch_d,
+                 skips=[4], gt_camera_param=(gt_intrinsic, gt_extrinsic),
+                 device=device).to(device)
+
     # == 3. LOSS ==
     criterion = torch.nn.MSELoss()
 
@@ -125,7 +126,7 @@ def main_worker(rank, opts):
         train(idx=i,
               i_train=i_train,
               images=images,
-              gt_cam_param = [gt_intrinsic, gt_extrinsic],
+              gt_cam_param=[gt_intrinsic, gt_extrinsic],
               hw=hw,
               model=model,
               criterion=criterion,
@@ -158,7 +159,7 @@ def main_worker(rank, opts):
                    opts=opts)
 
         scheduler.step()
-        
+
 
 if __name__ == "__main__":
     opts = get_args_parser()

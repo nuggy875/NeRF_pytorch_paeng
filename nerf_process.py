@@ -41,36 +41,47 @@ def pre_process(rays, posenc, opts, z_vals=None, weights=None, isFine=False):
     # make z_vals in COARSE Network
     if not isFine:
         N_rays = rays.size(0)
-        near = opts.near * torch.ones([N_rays, 1], device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
-        far = opts.far * torch.ones([N_rays, 1], device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
+        near = opts.near * \
+            torch.ones([N_rays, 1], device=torch.device(
+                f'cuda:{opts.gpu_ids[opts.rank]}'))
+        far = opts.far * \
+            torch.ones([N_rays, 1], device=torch.device(
+                f'cuda:{opts.gpu_ids[opts.rank]}'))
 
-        t_vals = torch.linspace(0., 1., steps=opts.N_samples_c, device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
+        t_vals = torch.linspace(0., 1., steps=opts.N_samples_c, device=torch.device(
+            f'cuda:{opts.gpu_ids[opts.rank]}'))
         z_vals = near * (1.-t_vals) + far * (t_vals)
         z_vals = z_vals.expand([N_rays, opts.N_samples_c])
         mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
         upper = torch.cat([mids, z_vals[..., -1:]], -1)
         lower = torch.cat([z_vals[..., :1], mids], -1)
-        t_rand = torch.rand([N_rays, opts.N_samples_c], device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
+        t_rand = torch.rand([N_rays, opts.N_samples_c], device=torch.device(
+            f'cuda:{opts.gpu_ids[opts.rank]}'))
         z_vals = lower + (upper-lower) * t_rand
     # make z_vals in FINE Network
     else:
         z_vals_mid = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
-        z_samples = sample_pdf(z_vals_mid, weights[..., 1:-1], opts.N_samples_f, det=(opts.perturb == 0.), opts=opts)
+        z_samples = sample_pdf(
+            z_vals_mid, weights[..., 1:-1], opts.N_samples_f, det=(opts.perturb == 0.), opts=opts)
         z_samples = z_samples.detach()
         z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
 
-    input_pts = rays_o.unsqueeze(1) + rays_d.unsqueeze(1) * z_vals.unsqueeze(-1)
+    input_pts = rays_o.unsqueeze(
+        1) + rays_d.unsqueeze(1) * z_vals.unsqueeze(-1)
     # [1024/4096, 64, 3] -> [65536/262144, 3]
     input_pts_flat = input_pts.view(-1, 3)
-    input_pts_embedded = fn_posenc(input_pts_flat)                      # [n_pts, 63]
+    input_pts_embedded = fn_posenc(
+        input_pts_flat)                      # [n_pts, 63]
 
     # [4096, 3] -> [4096, 1, 3]-> [4096, 64, 3]
     input_dirs = viewdirs.unsqueeze(1).expand(input_pts.size())
     # [n_pts, 3]
     input_dirs_flat = input_dirs.reshape(-1, 3)
-    input_dirs_embedded = fn_posenc_d(input_dirs_flat)                  # [n_pts, 27]
+    input_dirs_embedded = fn_posenc_d(
+        input_dirs_flat)                  # [n_pts, 27]
 
-    embedded = torch.cat([input_pts_embedded, input_dirs_embedded], -1) # [n_pts, 90]
+    embedded = torch.cat(
+        [input_pts_embedded, input_dirs_embedded], -1)  # [n_pts, 90]
     return embedded, z_vals, rays_d
 
 
@@ -95,7 +106,8 @@ def post_process(outputs, z_vals, rays_d):
     alpha = raw2alpha(outputs[..., 3], dists)  # [N_rays, N_samples]
 
     # Density(alpha) X Transmittance
-    transmittance = torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1)).to(device), 1.-alpha + 1e-10], -1), -1)[:, :-1]
+    transmittance = torch.cumprod(torch.cat(
+        [torch.ones((alpha.shape[0], 1)).to(device), 1.-alpha + 1e-10], -1), -1)[:, :-1]
     weights = alpha * transmittance
 
     rgb_map = torch.sum(weights.unsqueeze(-1) * rgb_sigmoid, -2)  # [N_rays, 3]
@@ -106,16 +118,20 @@ def post_process(outputs, z_vals, rays_d):
     # if torch.isnan(disp_map).sum():
     #     print(torch.isnan(disp_map).sum())
     # ==============================================================================================================
-    
+
     # ==============================================================================================================
-    disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map), depth_map / torch.sum(weights, -1)) # FIXME NAN Issue ( torch.max(nan, epsilon) = nan )
-    disp_map = torch.where(torch.isnan(disp_map), torch.zeros_like(depth_map), disp_map)
+    # FIXME NAN Issue ( torch.max(nan, epsilon) = nan )
+    disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map),
+                            depth_map / torch.sum(weights, -1))
+    disp_map = torch.where(torch.isnan(disp_map),
+                           torch.zeros_like(depth_map), disp_map)
     # ==============================================================================================================
     # disp_map = 1. / torch.where(torch.isnan(depth_map / torch.sum(weights, -1)),
     #                             1e-10 * torch.ones_like(depth_map),
     #                             torch.max(1e-10 * torch.ones_like(depth_map), depth_map / torch.sum(weights, -1)))
     scale_factor = 5.
-    disp_map = torch.where(disp_map>scale_factor, scale_factor * torch.ones_like(disp_map), disp_map)
+    disp_map = torch.where(disp_map > scale_factor,
+                           scale_factor * torch.ones_like(disp_map), disp_map)
     # ==
     acc_map = torch.sum(weights, -1)
     # alpha to real color
@@ -139,10 +155,12 @@ def sample_pdf(bins, weights, N_samples, det=False, opts=None):
 
     # Take uniform samples
     if det:
-        u = torch.linspace(0., 1., steps=N_samples, device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
+        u = torch.linspace(0., 1., steps=N_samples, device=torch.device(
+            f'cuda:{opts.gpu_ids[opts.rank]}'))
         u = u.expand(list(cdf.shape[:-1]) + [N_samples])
     else:
-        u = torch.rand(list(cdf.shape[:-1]) + [N_samples], device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
+        u = torch.rand(list(cdf.shape[:-1]) + [N_samples],
+                       device=torch.device(f'cuda:{opts.gpu_ids[opts.rank]}'))
 
     # Invert CDF
     u = u.contiguous()
@@ -176,11 +194,13 @@ def render_rays(rays, model, posenc, opts):
     outputs = outputs_flat.reshape(size)
 
     # 3-a) post process : render each pixel color by formula (3) in nerf paper
-    rgb_map, disp_map, acc_map, weights, depth_map = post_process(outputs, z_vals, rays_d)
+    rgb_map, disp_map, acc_map, weights, depth_map = post_process(
+        outputs, z_vals, rays_d)
 
     if opts.N_samples_f > 0:
         # 1-b) pre precess
-        embedded_fine, z_vals_fine, rays_d = pre_process(rays, posenc, opts, z_vals=z_vals, weights=weights, isFine=True)
+        embedded_fine, z_vals_fine, rays_d = pre_process(
+            rays, posenc, opts, z_vals=z_vals, weights=weights, isFine=True)
 
         # 2-b) run model by net_chunk
         outputs_fine_flat = torch.cat([model(embedded_fine[i:i + chunk], is_fine=True)
@@ -189,7 +209,8 @@ def render_rays(rays, model, posenc, opts):
         outputs_fine = outputs_fine_flat.reshape(size_fine)
 
         # 3-b) post process : render each pixel color by formula (3) in nerf paper
-        rgb_map_fine, disp_map_fine, acc_map_fine, weights_fine, depth_map_fine = post_process(outputs_fine, z_vals_fine, rays_d)
+        rgb_map_fine, disp_map_fine, acc_map_fine, weights_fine, depth_map_fine = post_process(
+            outputs_fine, z_vals_fine, rays_d)
 
         return {'rgb_c': rgb_map, 'disp_c': disp_map, 'rgb_f': rgb_map_fine, 'disp_f': disp_map_fine}
     return {'rgb_c': rgb_map, 'disp_c': disp_map}
