@@ -1,122 +1,113 @@
 import os
-import time
 import torch
 import numpy as np
-from configs.config import LOG_DIR
-from utils import mse2psnr, img2mse
-from process import sample_rays_and_pixel, get_rays, preprocess_rays, run_model_batchify
+
+from config import LOG_DIR
+from methods.visualize import visualize_extrinsic
+from nerf_process import batchify_rays_and_render_by_chunk
+from rays import make_o_d, sample_rays_and_pixel
+from utils import mse2psnr
 
 
-def train_each_iters(i, i_train, images, poses, hwk, model, criterion, fn_posenc, fn_posenc_d, vis, optimizer,
-                     result_best, cfg):
+def train(idx, i_train, images, gt_cam_param, hw, model, criterion, posenc, optimizer, global_batch_idx, vis, opts):
 
-    img_h, img_w, img_k = hwk
+    model.train()
+    # [0] GET PARAMETER or GT from Model
+    img_h, img_w = hw
+    gt_intrinsic, gt_extrinsic = gt_cam_param
+    param_intrinsic = torch.from_numpy(gt_intrinsic).to(f'cuda:{opts.gpu_ids[opts.rank]}')
+    param_extrinsic = torch.from_numpy(gt_extrinsic).to(f'cuda:{opts.gpu_ids[opts.rank]}')
 
-    i_img = np.random.choice(i_train)
-    target_img = images[i_img]
-    target_img = torch.Tensor(target_img)
-    target_pose = poses[i_img, :3, :4]
-    rays_o, rays_d = get_rays(img_w, img_h, img_k, torch.Tensor(
-        target_pose).to(cfg.device.gpu_ids[cfg.device.rank]))
+    # [1] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    # == [1-1]. global batch ==
+    if global_batch_idx is not None and opts.global_batch:
+        # batch가 size를 넘어가면 shuffle
+        i_batch, rays_rgb, epoch = global_batch_idx(opts.N_rays)
+        # Random over all images
+        batch = rays_rgb[i_batch - opts.N_rays:i_batch]  # [B, 2+1, 3*?]
+        batch = torch.transpose(batch, 0, 1)
+        batch_rays, target_img = batch[:2], batch[2]
+        rays_o, rays_d = batch_rays
 
-    # [2] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    # HxW 의 Pixel 중에서 n_rays_per_image(1024)개의 랜덤 샘플링
-    rays_o, rays_d, target_img_s = sample_rays_and_pixel(
-        i, rays_o, rays_d, target_img, cfg)
+    # == [1-2]. Sampling within one image ==
+    else:
+        # sample train index
+        i_img = np.random.choice(i_train)
+        target_img = torch.from_numpy(images[i_img]).type(torch.float32).to(f'cuda:{opts.gpu_ids[opts.rank]}')
+        target_pose = param_extrinsic[i_img, :3, :4]
+        # make rays_o and rays_d
+        rays_o, rays_d = make_o_d(img_w, img_h, param_intrinsic, target_pose)
+        rays_o, rays_d, target_img = sample_rays_and_pixel(idx, rays_o, rays_d, target_img, opts)
 
-    # [3] Preprocess Rays   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    rays = preprocess_rays(rays_o, rays_d, cfg)
 
-    # [4] Run Model         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    ret = run_model_batchify(rays=rays,
-                             fn_posenc=fn_posenc,
-                             fn_posenc_d=fn_posenc_d,
-                             model=model,
-                             cfg=cfg)
+    # [2] Run Model         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    # ** assign target_img to cuda **
+    target_img = target_img.to(f'cuda:{opts.gpu_ids[opts.rank]}')
 
-    # assign target_img
-    target_img_s = target_img_s.to(
-        'cuda:{}'.format(cfg.device.gpu_ids[cfg.device.rank]))
+    pred_rgb_c, pred_disp_c, pred_rgb_f, pred_disp_f = batchify_rays_and_render_by_chunk(rays_o, rays_d, model, posenc, img_h, img_w, param_intrinsic, opts)
 
+    # == Optimizer
     optimizer.zero_grad()
 
-    # loss = img2mse(target_img_s, ret['rgb_map'])
-    loss = criterion(target_img_s, ret['rgb_map'])
-
-    if cfg.render.n_fine_pts_per_ray > 0:
+    # [3] Get LOSS          >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    loss = criterion(pred_rgb_c, target_img)
+    if opts.N_samples_f > 0:
         loss_c = loss
-        loss_f = criterion(target_img_s, ret['rgb_map_c'])
         psnr_c = mse2psnr(loss_c)
+        loss_f = criterion(pred_rgb_f, target_img)
         psnr_f = mse2psnr(loss_f)
         loss = loss_c + loss_f
-
     psnr = mse2psnr(loss)
 
     loss.backward()
     optimizer.step()
 
-    save_path = os.path.join(LOG_DIR, cfg.training.name)
-    os.makedirs(save_path, exist_ok=True)
+    # [4] VISDOM & PRINT    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if opts.N_samples_f > 0:
+        if idx % opts.idx_print == 0:
+            print('i : {} , Loss_C : {} , Loss_F : {} , Total_Loss : {} , PSNR_C : {} , PSNR_F : {}'.format(idx, loss_c, loss_f, loss, psnr_c, psnr_f))
 
-    if cfg.render.n_fine_pts_per_ray > 0:
-        checkpoint = {'idx': i,
-                      'model_state_dict': model.state_dict(),
-                      'optimizer_state_dict': optimizer.state_dict()}
-        # ====  Print LOG  ====
-        if i % cfg.training.idx_print == 0:
-            print('i : {} , Loss_C : {} , Loss_F : {} , Total_Loss : {} , PSNR_C : {} , PSNR_F : {}'.format(
-                i, loss_c, loss_f, loss, psnr_c, psnr_f))
-
-        if i % cfg.training.idx_visdom == 0 and vis is not None:
-            vis.line(X=torch.ones((1, 5)).cpu() * i,
+        if idx % opts.idx_vis == 0 and vis is not None:
+            vis.line(X=torch.ones((1, 4)).cpu() * idx,
                      Y=torch.Tensor(
-                         [loss_c, loss_f, loss, psnr_c, psnr_f]).unsqueeze(0).cpu(),
-                     win='loss_psnr_{}'.format(cfg.training.name),
+                         [loss_c, loss_f, psnr_c, psnr_f]).unsqueeze(0).cpu(),
+                     win='loss_psnr_{}'.format(opts.exp_name),
                      update='append',
                      opts=dict(xlabel='iteration',
                                ylabel='loss_psnr',
-                               title='LOSS&PSNR for {}'.format(
-                                   cfg.training.name),
-                               legend=['LOSS_Coarse', 'LOSS_Fine', 'LOSS_Total', 'PSNR_Coarse', 'PSNR_Fine']))
+                               title='LOSS&PSNR for {}'.format(opts.exp_name),
+                               legend=['LOSS_Coarse', 'LOSS_Fine', 'PSNR_Coarse', 'PSNR_Fine']))
 
     else:
-        checkpoint = {'idx': i,
-                      'model_state_dict': model.state_dict(),
-                      'optimizer_state_dict': optimizer.state_dict()}
-        # ====  Print LOG  ====
-        if i % cfg.training.idx_print == 0:
-            print('i : {} , LOSS : {} , PSNR : {}'.format(i, loss, psnr))
+        if idx % opts.idx_print == 0:
+            print('i : {} , LOSS : {} , PSNR : {}'.format(idx, loss, psnr))
 
-        if i % cfg.training.idx_visdom == 0 and vis is not None:
-            vis.line(X=torch.ones((1, 2)).cpu() * i,
+        if idx % opts.idx_vis == 0 and vis is not None:
+            vis.line(X=torch.ones((1, 2)).cpu() * idx,
                      Y=torch.Tensor([loss, psnr]).unsqueeze(0).cpu(),
-                     win='loss_psnr_{}'.format(cfg.training.name),
+                     win='loss_psnr_{}'.format(opts.exp_name),
                      update='append',
                      opts=dict(xlabel='iteration',
                                ylabel='loss_psnr',
                                title='LOSS&PSNR for {}'.format(
-                                   cfg.training.name),
+                                   opts.exp_name),
                                legend=['LOSS', 'PSNR']))
 
-    # ====  Save .pth file  ====
-    if i % cfg.training.idx_save == 0 and i > 0:
-        torch.save(checkpoint, os.path.join(
-            save_path, cfg.training.name + '_{}.pth.tar'.format(i)))
+    # [5] Save .pth    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    checkpoint = {'idx': idx,
+                  'model_state_dict': model.state_dict(),
+                  'optimizer_state_dict': optimizer.state_dict()}
 
-    # == GET Best result for training ==
-    if cfg.render.n_fine_pts_per_ray > 0:
-        if result_best['psnr'] < psnr_f:
-            result_best['i'] = i
-            result_best['loss'] = loss
-            result_best['psnr'] = psnr_f
-            torch.save(checkpoint, os.path.join(
-                save_path, cfg.training.name + '_best.pth.tar'))
-    else:
-        if result_best['psnr'] < psnr:
-            result_best['i'] = i
-            result_best['loss'] = loss
-            result_best['psnr'] = psnr
-            torch.save(checkpoint, os.path.join(
-                save_path, cfg.training.name + '_best.pth.tar'))
+    save_path = os.path.join(LOG_DIR, opts.exp_name)
+    os.makedirs(save_path, exist_ok=True)
 
-    return result_best
+    if idx % opts.idx_save == 0 and idx > 0:
+        torch.save(checkpoint, os.path.join(save_path, opts.exp_name + '_{}.pth.tar'.format(idx)))
+    
+    # [6] Save Extrinsic Visualization    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if idx == 1:
+        visualize_extrinsic(iter=idx, poses=gt_cam_param[1], idx_list=i_train, opts=opts, intrinsics=gt_cam_param[0], hw=hw)
+
+
+if __name__ == "__main__":
+    print('training')

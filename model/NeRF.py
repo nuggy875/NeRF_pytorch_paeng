@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import cv2
+
+from .NeRFHelper import Exp
 
 
 class NeRFModule(nn.Module):
@@ -26,6 +29,7 @@ class NeRFModule(nn.Module):
         self.linear_density = nn.Linear(W, 1)
         self.linear_color = nn.Linear(W//2 ,3)
 
+
     def forward(self, x):
         input_x, input_d = torch.split(x, [self.input_ch_x, self.input_ch_d], dim=-1)
         out = input_x
@@ -49,35 +53,26 @@ class NeRFModule(nn.Module):
 
 
 class NeRF(nn.Module):
-    def __init__(self, D:int, W:int, input_ch: int, input_ch_d: int, skips = [4]):
+    def __init__(self, D:int, W:int, input_ch: int, input_ch_d: int, skips = [4], gt_camera_param = None, device = None):
         super().__init__()
         self.model_coarse = NeRFModule(D, W, input_ch, input_ch_d, skips)
         self.model_fine = NeRFModule(D, W, input_ch, input_ch_d, skips)
         self.apply(self._init_weights)
+        self.gt_intrinsic, self.gt_extrinsic = gt_camera_param      # Ground Truth Value for INTRINSIC & EXTRINSIC
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
-    
+
+    def get_camera_gt(self):
+        return self.gt_intrinsic, self.gt_extrinsic
+
     def forward(self, x, is_fine:bool = False):
         '''
         Coarse Network : is_fine=False,
         Fine Network : is_fine=True
         '''
         if is_fine:
-            return self.model_coarse(x)
-        else:
             return self.model_fine(x)
-
-
-
-
-if __name__ == "__main__":
-    device_ids = [0]
-    device = torch.device('cuda:{}'.format(min(device_ids)) if torch.cuda.is_available() else 'cpu')
-    model = NeRF(D=8, W=256, input_ch=63, input_ch_d=27, skips=[4]).to(device)
-
-    input_test = torch.rand(65536,90).to(device)       # torch.Size([65536, 63+27])
-
-    result_test = model(input_test)
-    print(result_test.shape)
+        else:
+            return self.model_coarse(x)

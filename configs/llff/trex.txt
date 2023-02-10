@@ -1,0 +1,36 @@
+# >> Setting
+gpu_ids = [1]
+
+# >> Dataset
+data_type = llff
+data_name = trex
+data_root = /home/brozserver3/brozdisk/data/nerf/nerf_llff_data/trex
+
+downsample = 8
+near = 0.
+far = 1.
+
+# >> Training
+exp_name = llff_trex
+iter_N = 200000               # Training Iteration
+iter_start = 0                # for resume
+# ====== Batch
+N_rays = 4096                 # Num of RAYS per iteration(Image)
+N_samples_c = 64              # Num of POINTS per RAYS in COARSE Network
+N_samples_f = 128             # Num of POINTS per RAYS in FINE Network
+
+# >> Testing
+# mode_test_false
+testskip = 8
+
+# >> Rendering
+# mode_render_false
+render_type = gif
+
+# >> For only Testing & Rendering without Training
+testing_idx = 200000
+
+# >> Set Index
+idx_save = 100000
+idx_test = 200000
+idx_render = 200000

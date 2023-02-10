@@ -1,0 +1,41 @@
+# >> Setting
+gpu_ids = [1]
+
+# >> Dataset
+data_type = blender
+data_name = mic
+data_root = /home/brozserver3/brozdisk/data/nerf/nerf_synthetic/mic
+
+downsample = 0
+near = 2.
+far = 6.
+bkg_white_true
+
+# >> Training
+exp_name = blender_mic
+iter_N = 200000               # Training Iteration
+iter_start = 0                # for resume
+# ====== Batch
+global_batch_false
+N_rays = 4096                 # Num of RAYS per iteration(Image)
+N_samples_c = 64              # Num of POINTS per RAYS in COARSE Network
+N_samples_f = 128             # Num of POINTS per RAYS in FINE Network
+
+# >> Testing  (add arg 'mode_test_false' for no testing)
+# mode_test_false
+testskip = 1
+# >> Rendering  (add arg 'mode_render_false' for no rendering)
+# mode_render_false
+render_type = gif
+n_angle = 120
+single_angle = -1
+phi = -30.0
+nf = 4.0
+
+# >> For only Testing & Rendering without Training
+testing_idx = 200000
+
+# >> Set Index
+idx_save = 100000
+idx_test = 200000
+idx_render = 200000
