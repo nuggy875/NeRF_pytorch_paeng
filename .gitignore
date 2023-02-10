@@ -1,7 +1,0 @@
-**/__pycache__/
-__pycache__/
-outputs/*
-data/*
-logs/*
-./idea
-.DS_Store
