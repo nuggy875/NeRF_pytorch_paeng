@@ -209,36 +209,36 @@ cuDNN : v8.0.5
       </thead>
       <tbody>
             <tr width="500px">
-                  <td><img src="./figures/blender/fern_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/fern_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/fern_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/fern_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/flower_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/flower_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/flower_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/flower_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/fortress_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/fortress_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/fortress_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/fortress_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/horns_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/horns_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/horns_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/horns_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/leaves_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/leaves_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/leaves_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/leaves_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/orchids_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/orchids_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/orchids_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/orchids_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/room_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/room_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/room_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/room_disp.gif" width="100%" height="100%"></td>
             </tr>
             <tr width="500px">
-                  <td><img src="./figures/blender/trex_rgb.gif" width="100%" height="100%"></td>
-                  <td><img src="./figures/blender/trex_disp.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/trex_rgb.gif" width="100%" height="100%"></td>
+                  <td><img src="./figures/llff/trex_disp.gif" width="100%" height="100%"></td>
             </tr>
       </tbody>
 </table>
