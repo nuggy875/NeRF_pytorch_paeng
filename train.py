@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 from config import LOG_DIR
-from methods.visualize import visualize_extrinsic
+from methods.visualize import visualize_extrinsic, visualize_ray
 from nerf_process import batchify_rays_and_render_by_chunk
 from rays import make_o_d, sample_rays_and_pixel
 from utils import mse2psnr
@@ -15,8 +15,10 @@ def train(idx, i_train, images, gt_cam_param, hw, model, criterion, posenc, opti
     # [0] GET PARAMETER or GT from Model
     img_h, img_w = hw
     gt_intrinsic, gt_extrinsic = gt_cam_param
-    param_intrinsic = torch.from_numpy(gt_intrinsic).to(f'cuda:{opts.gpu_ids[opts.rank]}')
-    param_extrinsic = torch.from_numpy(gt_extrinsic).to(f'cuda:{opts.gpu_ids[opts.rank]}')
+    param_intrinsic = torch.from_numpy(gt_intrinsic).to(
+        f'cuda:{opts.gpu_ids[opts.rank]}')
+    param_extrinsic = torch.from_numpy(gt_extrinsic).to(
+        f'cuda:{opts.gpu_ids[opts.rank]}')
 
     # [1] Sampling Target & Rays    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # == [1-1]. global batch ==
@@ -33,18 +35,23 @@ def train(idx, i_train, images, gt_cam_param, hw, model, criterion, posenc, opti
     else:
         # sample train index
         i_img = np.random.choice(i_train)
-        target_img = torch.from_numpy(images[i_img]).type(torch.float32).to(f'cuda:{opts.gpu_ids[opts.rank]}')
+        target_img = torch.from_numpy(images[i_img]).type(
+            torch.float32).to(f'cuda:{opts.gpu_ids[opts.rank]}')
         target_pose = param_extrinsic[i_img, :3, :4]
+        H, W = target_img.shape[0], target_img.shape[1]
         # make rays_o and rays_d
         rays_o, rays_d = make_o_d(img_w, img_h, param_intrinsic, target_pose)
-        rays_o, rays_d, target_img = sample_rays_and_pixel(idx, rays_o, rays_d, target_img, opts)
-
+        rays_o, rays_d, target_img = sample_rays_and_pixel(
+            idx, rays_o, rays_d, target_img, opts)
+        # visualize_ray(rays_o, rays_d, (H, W),
+        #               f'cuda:{opts.gpu_ids[opts.rank]}', )
 
     # [2] Run Model         >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # ** assign target_img to cuda **
     target_img = target_img.to(f'cuda:{opts.gpu_ids[opts.rank]}')
 
-    pred_rgb_c, pred_disp_c, pred_rgb_f, pred_disp_f = batchify_rays_and_render_by_chunk(rays_o, rays_d, model, posenc, img_h, img_w, param_intrinsic, opts)
+    pred_rgb_c, pred_disp_c, pred_rgb_f, pred_disp_f = batchify_rays_and_render_by_chunk(
+        rays_o, rays_d, model, posenc, img_h, img_w, param_intrinsic, opts)
 
     # == Optimizer
     optimizer.zero_grad()
@@ -65,7 +72,8 @@ def train(idx, i_train, images, gt_cam_param, hw, model, criterion, posenc, opti
     # [4] VISDOM & PRINT    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if opts.N_samples_f > 0:
         if idx % opts.idx_print == 0:
-            print('i : {} , Loss_C : {} , Loss_F : {} , Total_Loss : {} , PSNR_C : {} , PSNR_F : {}'.format(idx, loss_c, loss_f, loss, psnr_c, psnr_f))
+            print('i : {} , Loss_C : {} , Loss_F : {} , Total_Loss : {} , PSNR_C : {} , PSNR_F : {}'.format(
+                idx, loss_c, loss_f, loss, psnr_c, psnr_f))
 
         if idx % opts.idx_vis == 0 and vis is not None:
             vis.line(X=torch.ones((1, 4)).cpu() * idx,
@@ -102,11 +110,13 @@ def train(idx, i_train, images, gt_cam_param, hw, model, criterion, posenc, opti
     os.makedirs(save_path, exist_ok=True)
 
     if idx % opts.idx_save == 0 and idx > 0:
-        torch.save(checkpoint, os.path.join(save_path, opts.exp_name + '_{}.pth.tar'.format(idx)))
-    
+        torch.save(checkpoint, os.path.join(
+            save_path, opts.exp_name + '_{}.pth.tar'.format(idx)))
+
     # [6] Save Extrinsic Visualization    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if idx == 1:
-        visualize_extrinsic(iter=idx, poses=gt_cam_param[1], idx_list=i_train, opts=opts, intrinsics=gt_cam_param[0], hw=hw)
+        visualize_extrinsic(
+            iter=idx, poses=gt_cam_param[1], idx_list=i_train, opts=opts, intrinsics=gt_cam_param[0], hw=hw)
 
 
 if __name__ == "__main__":

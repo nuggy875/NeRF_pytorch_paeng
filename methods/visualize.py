@@ -149,6 +149,39 @@ def visualize_extrinsic(iter, poses, idx_list, opts, vis_extrinsic=True, intrins
         plt.savefig(save_path_2+f'/{iter}.png')
 
 
+def visualize_ray(rays_o, rays_d, hw, device):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.view_init(30, 60)
+    ax.set_xlabel('x axis')
+    ax.set_ylabel('y axis')
+    ax.set_zlabel('z axis')
+    # rays_o : [H, W, 3]
+    # rays_d : [H, W, 3]
+    img_h, img_w = hw
+    vec_pts_N = 120
+    near = 0.0
+    far = 2.0
+    z_vals = make_z_vals(vec_pts_N, hw, near, far, device)
+    center_vector = rays_d[int(img_h/2)][int(img_w/2)]
+    o_val = rays_o[0][0]
+    ray_test = o_val + center_vector.unsqueeze(0) * z_vals.reshape(vec_pts_N,1)
+    xs = []
+    ys = []
+    zs = []
+    for idx, point in enumerate(ray_test):
+        xs.append(point[0].item())
+        ys.append(point[1].item())
+        zs.append(point[2].item())
+    xs_np=np.array(xs)
+    ys_np=np.array(ys)
+    zs_np=np.array(zs)
+    ax.scatter(xs_np, ys_np, zs_np, marker='o', s=0.1, color="#FF0066")
+    plt.savefig('./logs'+f'/test_1.png')
+
+
+
+
 if __name__ == "__main__":
     opts = get_args_parser()
 
